@@ -6,10 +6,10 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 
-from pdb import set_trace
-
-from add_features.utils import PARENT_DIR
+from add_features.utils import PARENT_DIR, CURRENT_ID
 from add_features.main import add_features
+
+from pdb import set_trace
 
 set_config(display='diagram', transform_output='pandas')
 
@@ -48,14 +48,8 @@ def create_train_test_split(parent_dir=PARENT_DIR, test_size=0.3):
     return df, train_index, test_index
 
 
-
-
-
-if __name__ == "__main__":
-    # Note - this is saving initial output
-    df, train_idx, test_idx = create_train_test_split()
-
-    # APPLICATION-LEVEL FEATURE ENG
+def feature_eng(df, train_idx, test_idx, parent_dir=PARENT_DIR):
+     # APPLICATION-LEVEL FEATURE ENG
     df["LTV"] = df["AMT_CREDIT"] / df["AMT_GOODS_PRICE"]
     df["LB_Credit_Length"] = df["AMT_CREDIT"] / df["AMT_ANNUITY"]
     df["Credit_to_Inc"] = df["AMT_CREDIT"] / df["AMT_INCOME_TOTAL"]
@@ -93,6 +87,7 @@ if __name__ == "__main__":
     max_missing = .51
     include = ["EXT_SOURCE_1"]
     number_cols_to_drop= len(df.columns[df.isna().mean() > max_missing]) - len(include)
+    # TODO: print this number!
     cut_df = df.copy()
     cut_df = cut_df.loc[:, df.columns[df.isna().mean() <= max_missing]]
     # add back columns in `include` vector
@@ -108,25 +103,36 @@ if __name__ == "__main__":
     train = df.iloc[train_idx, ]
     test = df.iloc[test_idx, ]
     # on-the-fly compression by extension
-    train.to_csv(PARENT_DIR / 'processed' / 'train_apps_ext.csv.zip')
-    test.to_csv(PARENT_DIR / 'processed' / 'test_apps_ext.csv.zip')
+    train.to_csv(parent_dir / 'processed' / 'train_apps_ext.csv.zip')
+    test.to_csv(parent_dir / 'processed' / 'test_apps_ext.csv.zip')
 
+    return df, train, test
+
+
+if __name__ == "__main__":
+    # Commented out to save time
+    # Note - these are saving outputs
+    # df, train_idx, test_idx = create_train_test_split()
+    # df, train, test = feature_eng(df, train_idx, test_idx)
+
+    train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_ext.csv.zip', compression="zip", index_col=CURRENT_ID)
+    test = pd.read_csv(PARENT_DIR / 'processed' / 'test_apps_ext.csv.zip', compression="zip", index_col=CURRENT_ID)
 
     ### DATA-BASED IMPUTATION - also dealing with missing for quantitative variables
 
     # Split into X, y
-    X = df.loc[:, df.columns != 'TARGET']
     X_train, y_train = train.loc[:, train.columns != 'TARGET'], train.TARGET
     X_test, y_test = test.loc[:, test.columns != 'TARGET'], test.TARGET
 
     # Use metadata to categorise correctly
     metadata = pd.read_csv(PARENT_DIR / "meta" / "train_summary_applications.csv", index_col=["Attribute"])
     data_types = metadata["Data Type"]
-    pd_cols = set(df.columns)
+    pd_cols = set(train.columns)
     numeric_features = [attr for attr, type in data_types.items() if type == "Quantitative" and attr in pd_cols]
     categorical_features = [attr for attr, type in data_types.items() if type == "Categorical" and attr in pd_cols]
     # NOTE: applicant-level engineered features checked to have no missing. Otherwise, add here as needed
     app_numeric_feats = ["LTV", "LB_Credit_Length", "Credit_to_Inc"]
+    hist_numeric_feats = ["CC_PROP_CONS_QRT", "CC_PROP_CONS_"]
     numeric_features += app_numeric_feats
     # add daytime to categorical
     categorical_features += ['DAYTIME_PROCESS_START']
@@ -136,7 +142,9 @@ if __name__ == "__main__":
         ('imputer', SimpleImputer(strategy='median'))
     ])
     categorical_transformer = Pipeline(steps=[
-        ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
+        ('onehot', OneHotEncoder(
+            drop='first', handle_unknown='ignore', sparse_output=False, min_frequency=.05
+            ))
     ])
     preprocessor_tree = ColumnTransformer(
         transformers=[
@@ -149,8 +157,7 @@ if __name__ == "__main__":
     X_train_proc = preprocessor_tree.fit_transform(X_train)
     X_test_proc = preprocessor_tree.transform(X_test)
 
-    # TODO: Check results. Known issue: EXT_SOURCE_1 not Quantitative?
-    # After checks, try to remove prefixes
+    # TODO: Save processed
     set_trace()
 
 
