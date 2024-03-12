@@ -1,13 +1,8 @@
 import pandas as pd
-from pathlib import Path
+from utils import PARENT_DIR, CURRENT_ID, BUREAU_ID, PREV_ID
 
 from pdb import set_trace
 import gc
-
-PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
-CURRENT_ID = "SK_ID_CURR"
-PREV_ID = "SK_ID_PREV"
-BUREAU_ID = "SK_ID_BUREAU"
 
 # Load datasets
 df = pd.read_csv(PARENT_DIR / 'processed' / 'sample_train_raw_apps.csv.zip', compression="zip")

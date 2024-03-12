@@ -1,6 +1,4 @@
 import pandas as pd
-import numpy as np
-from pathlib import Path
 from sklearn import set_config
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.pipeline import Pipeline
@@ -10,9 +8,10 @@ from sklearn.compose import ColumnTransformer
 
 from pdb import set_trace
 
+from utils import PARENT_DIR
+
 set_config(display='diagram', transform_output='pandas')
 
-PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
 RANDOM_SEED = 8
 
 df = pd.read_csv(PARENT_DIR / 'application_train.csv.zip', compression='zip')

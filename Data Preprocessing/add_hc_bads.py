@@ -2,15 +2,10 @@
 Using SK_DPD_DEF attribute to signal delayed payments"""
 
 import pandas as pd
-from pathlib import Path
+from utils import PARENT_DIR, CURRENT_ID, PREV_ID
 
 from pdb import set_trace
 import gc
-
-PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
-CURRENT_ID = "SK_ID_CURR"
-PREV_ID = "SK_ID_PREV"
-BUREAU_ID = "SK_ID_BUREAU"
 
 def add_count(df, aux_df, aux_id, new_colname, subset=None, main_id=CURRENT_ID):
     """Returns new df"""

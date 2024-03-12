@@ -1,10 +1,6 @@
 import pandas as pd
-from pathlib import Path
-
-PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
+from utils import PARENT_DIR
 
 df = pd.read_csv(PARENT_DIR / 'processed' / 'train_raw_apps.csv.zip', compression="zip")
-
-sample_df = df.sample(n = 10000)
-
+sample_df = df.sample(n = 10000, random_state=1234)
 df.to_csv(PARENT_DIR / 'processed' / 'sample_train_raw_apps.csv.zip', index=False)

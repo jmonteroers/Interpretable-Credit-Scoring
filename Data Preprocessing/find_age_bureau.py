@@ -3,12 +3,9 @@ First example of function to engineer features, to be extended!
 """
 
 import pandas as pd
-from pathlib import Path
+from utils import PARENT_DIR, CURRENT_ID
 
 from pdb import set_trace
-
-PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
-CURRENT_ID = "SK_ID_CURR"
 
 
 def find_age_bureau(df, bureau):
