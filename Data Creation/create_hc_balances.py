@@ -4,9 +4,9 @@ them vertically to produce a single Home Credit Balance dataset (prev_balances)
 """
 
 import pandas as pd
-from utils import CURRENT_ID, PARENT_DIR
+from utils import CURRENT_ID, PREV_ID, PARENT_DIR
 
-SELECTED_COLS = [CURRENT_ID, "MONTHS_BALANCE", "SK_DPD", "SK_DPD_DEF"]
+SELECTED_COLS = [CURRENT_ID, PREV_ID, "MONTHS_BALANCE", "SK_DPD", "SK_DPD_DEF"]
 
 # previous home credit loan balances, only keep last snapshot, relevant columns.
 pos_balances = pd.read_csv(PARENT_DIR / "POS_CASH_balance.csv.zip", compression="zip")
