@@ -2,22 +2,10 @@
 Using SK_DPD_DEF attribute to signal delayed payments"""
 
 import pandas as pd
-from utils import PARENT_DIR, CURRENT_ID, PREV_ID
+from utils import PARENT_DIR, PREV_ID, add_count
 
 from pdb import set_trace
 import gc
-
-def add_count(df, aux_df, aux_id, new_colname, subset=None, main_id=CURRENT_ID):
-    """Returns new df"""
-    if subset is not None:
-        aux_df = aux_df.loc[subset]
-    df_ext = df.merge(aux_df, on=main_id, how="left")
-    counts = df_ext.groupby(main_id)[aux_id].count().reset_index()
-    counts.rename(columns={aux_id: new_colname}, inplace=True)
-    df = df.merge(counts, on=main_id, how="left")
-    df[new_colname].fillna(0, inplace=True)
-    return df
-
 
 # Load datasets
 df = pd.read_csv(PARENT_DIR / 'processed' / 'sample_train_raw_apps.csv.zip', compression="zip")

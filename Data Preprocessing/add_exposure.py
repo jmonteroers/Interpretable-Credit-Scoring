@@ -1,5 +1,5 @@
 import pandas as pd
-from utils import PARENT_DIR, CURRENT_ID
+from utils import PARENT_DIR, CURRENT_ID, add_exposure
 
 from pdb import set_trace
 import gc
@@ -8,15 +8,6 @@ import gc
 df = pd.read_csv(PARENT_DIR / 'processed' / 'sample_train_raw_apps.csv.zip', compression="zip")
 # keep memory lean
 gc.collect()
-
-def add_exposure(df, aux_df, subset, exp_col, new_col, main_id=CURRENT_ID):
-    aux_df = aux_df.loc[subset].copy()
-    # if na in exposure column, assume 0
-    aux_df[exp_col].fillna(0, inplace=True)
-    df_ext = df.merge(aux_df, on=main_id, how="left")
-    exposure = df_ext.groupby(main_id)[exp_col].sum().reset_index()
-    exposure.rename(columns={exp_col: new_col}, inplace=True)
-    return df.merge(exposure, on=main_id, how="left")
 
 
 # Credit Bureau
