@@ -1,5 +1,5 @@
 import pandas as pd
-from utils import PARENT_DIR, CURRENT_ID
+from utils import PARENT_DIR, CURRENT_ID, SAMPLE_ID_CURR
 
 from pdb import set_trace
 import gc
