@@ -1,6 +1,6 @@
 from pathlib import Path
 
-PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
+PARENT_DIR = Path(__file__).absolute().parents[3] / 'Data' / 'Home Credit'
 CURRENT_ID = "SK_ID_CURR"
 PREV_ID = "SK_ID_PREV"
 BUREAU_ID = "SK_ID_BUREAU"

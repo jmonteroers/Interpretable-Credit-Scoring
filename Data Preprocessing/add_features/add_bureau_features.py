@@ -1,5 +1,5 @@
 import pandas as pd
-from utils import PARENT_DIR, CURRENT_ID, BUREAU_ID, add_count, add_age_credit, add_exposure
+from .utils import PARENT_DIR, CURRENT_ID, BUREAU_ID, add_count, add_age_credit, add_exposure
 
 import gc
 
@@ -26,7 +26,6 @@ def add_bureau_features(df, parent_dir=PARENT_DIR):
     df = add_age_credit(df, bureau, "DAYS_CREDIT", "AGE_BUREAU", type="age", na_imp=0)
 
     # Feature - Total Exposure, Active Bureau Credits
-    # TODO: Build total exposure in add_features
     df = add_exposure(df, bureau, bureau.CREDIT_ACTIVE == "Active", "AMT_CREDIT_SUM", "BUREAU_EXP")
 
     # Feature - Number of Bureau Credits overdue >= 30 days

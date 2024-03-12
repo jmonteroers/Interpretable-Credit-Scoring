@@ -1,5 +1,6 @@
 import pandas as pd
-from utils import PARENT_DIR, CURRENT_ID, PREV_ID, SAMPLE_ID_CURR, add_count
+import numpy as np
+from .utils import PARENT_DIR, CURRENT_ID, PREV_ID, SAMPLE_ID_CURR, add_count
 
 import gc
 
@@ -29,6 +30,11 @@ def add_cc_features(df, parent_dir=PARENT_DIR):
     cc_balance.MONTHS_BALANCE = cc_balance.MONTHS_BALANCE.astype('int8')
     # define proportion of credit limit consumption
     cc_balance["PROP_CREDIT_LIMIT_CONS"] = cc_balance["AMT_BALANCE"] / cc_balance["AMT_CREDIT_LIMIT_ACTUAL"]
+    # fix infinity values for proportion (when no credit limit available)
+    median_prop = cc_balance["PROP_CREDIT_LIMIT_CONS"].median()
+    cc_balance["PROP_CREDIT_LIMIT_CONS"].replace([np.inf, -np.inf], np.nan, inplace=True)
+    cc_balance["PROP_CREDIT_LIMIT_CONS"].fillna(median_prop, inplace=True)
+
     # only using last 3 months of data
     cc_balance = cc_balance.loc[cc_balance.MONTHS_BALANCE >= -3]
     # keep memory lean

@@ -2,7 +2,7 @@
 Using the SK_DPD_DEF attribute to signal delayed payments"""
 
 import pandas as pd
-from utils import PARENT_DIR, PREV_ID, add_count
+from .utils import PARENT_DIR, PREV_ID, add_count
 
 import gc
 
