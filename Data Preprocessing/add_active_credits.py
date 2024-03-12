@@ -1,5 +1,5 @@
 import pandas as pd
-from utils import PARENT_DIR, CURRENT_ID, BUREAU_ID, PREV_ID, add_count, add_last_credit
+from utils import PARENT_DIR, CURRENT_ID, BUREAU_ID, PREV_ID, add_count, add_age_credit
 
 from pdb import set_trace
 import gc
@@ -22,7 +22,7 @@ df = add_count(df, bureau, BUREAU_ID, "N_BUREAU_LAST_YEAR", bureau.DAYS_CREDIT >
 
 # Feature 3 - Time since last bureau credit
 # nas imputed using minimum in train
-df = add_last_credit(df, bureau, "DAYS_CREDIT", "AGE_LAST_BUREAU", na_imp=-2922)
+df = add_age_credit(df, bureau, "DAYS_CREDIT", "AGE_LAST_BUREAU", type="last", na_imp=-2922)
 
 # Previous Applications
 del(bureau)
@@ -37,7 +37,7 @@ df = add_count(df, prev_apps, PREV_ID, "N_PREV_ACTIVE", prev_apps.DAYS_TERMINATI
 df = add_count(df, prev_apps, PREV_ID, "N_PREV_LAST_YEAR", prev_apps.DAYS_DECISION >= -365.)
 
 # Feature 6 - Time since last previous HC credit
-df = add_last_credit(df, prev_apps, "DAYS_DECISION", "AGE_LAST_HC", na_imp=-2922)
+df = add_age_credit(df, prev_apps, "DAYS_DECISION", "AGE_LAST_HC", type="last", na_imp=-2922)
 
 print(df.iloc[:5, -6:])
 

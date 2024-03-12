@@ -41,3 +41,15 @@ def add_last_credit(df, aux_df, age_col, new_colname, na_imp=None, main_id=CURRE
     if na_imp is not None:
         df[new_colname].fillna(na_imp, inplace=True)
     return df
+
+def add_age_credit(df, aux_df, age_col, new_colname, type, na_imp=None, main_id=CURRENT_ID):
+    """type can be either 'last' for most recent, 'age' for age of the oldest loan"""
+    assert type in ["last", "age"], "type must be either 'last' or 'age'"
+    agg_type = "max" if type == "last" else "min"
+    df_ext = df.merge(aux_df, on=main_id, how="left")
+    last_credit = df_ext.groupby(main_id)[age_col].agg(agg_type).reset_index()
+    last_credit.rename(columns={age_col: new_colname}, inplace=True)
+    df = df.merge(last_credit, on=main_id, how="left")
+    if na_imp is not None:
+        df[new_colname].fillna(na_imp, inplace=True)
+    return df
