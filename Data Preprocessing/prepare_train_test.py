@@ -79,17 +79,6 @@ def feature_eng(df, train_idx, test_idx, parent_dir=PARENT_DIR):
 
     # drop original hour and workday features
     df.drop(columns=['HOUR_APPR_PROCESS_START', 'WEEKDAY_APPR_PROCESS_START'], inplace=True)
-        
-    # Drop variables with more than 51% missing (slightly more than half)
-    max_missing = .51
-    include = ["EXT_SOURCE_1"]
-    number_cols_to_drop= len(df.columns[df.isna().mean() > max_missing]) - len(include)
-    print(f"Number of columns dropped given more than {100*max_missing} % missing: {number_cols_to_drop}")
-    cut_df = df.copy()
-    cut_df = cut_df.loc[:, df.columns[df.isna().mean() <= max_missing]]
-    # add back columns in `include` vector
-    cut_df[include] = df[include]
-    df = cut_df
 
     # FEATURE ENGINEERING - APPLICANT LEVEL
     df = add_features(df)
