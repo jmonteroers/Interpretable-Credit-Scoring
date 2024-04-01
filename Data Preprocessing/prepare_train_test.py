@@ -13,6 +13,7 @@ from pdb import set_trace
 
 set_config(display='diagram', transform_output='pandas')
 
+# used for train/test split
 RANDOM_SEED = 8
 
 def create_train_test_split(parent_dir=PARENT_DIR, test_size=0.3):
@@ -45,7 +46,7 @@ def create_train_test_split(parent_dir=PARENT_DIR, test_size=0.3):
     return df, train, test, train_index, test_index
 
 
-def feature_eng(df, train, test, train_idx, test_idx, parent_dir=PARENT_DIR):
+def feature_eng(df, train_idx, test_idx, parent_dir=PARENT_DIR):
     """
     Builds features (at application, applicant level, the latter using `add_features`). Applies non data-based imputation, plus re-categorise of HOUR_APPR_PROCESS_START. Takes as input train/test_raw_apps.csv.zip, saves as output train/test_apps_ext.csv.zip
     """
@@ -53,21 +54,6 @@ def feature_eng(df, train, test, train_idx, test_idx, parent_dir=PARENT_DIR):
     df["LTV"] = df["AMT_CREDIT"] / df["AMT_GOODS_PRICE"]
     df["LB_Credit_Length"] = df["AMT_CREDIT"] / df["AMT_ANNUITY"]
     df["Credit_to_Inc"] = df["AMT_CREDIT"] / df["AMT_INCOME_TOTAL"]
-
-    # NON DATA-BASED IMPUTATION
-    # Impute NANs in bureau applications as zeros - reasonable, since it is the mode
-    bureau_cols = [col for col in df.columns if 'BUREAU' in col]
-    for col in bureau_cols:
-        df.loc[pd.isna(df[col]), col] = 0
-    # check - it works
-    # missing_bureau = df[bureau_cols].isna().sum()
-
-    # Impute own car age as zero when not having a car
-    # relative frequencies - almost all missing in own car age do not have a car, except 5 obs
-    # have_car_by_car_age = train.groupby(["FLAG_OWN_CAR", "OWN_CAR_AGE"], dropna=False).size().reset_index()
-    df.loc[
-        (df.FLAG_OWN_CAR == "N") & pd.isna(df['OWN_CAR_AGE']), 
-        'OWN_CAR_AGE'] = 0
 
     # Re-categorise Application Start Hour
     # Define function to map hour to time of day
@@ -108,6 +94,7 @@ def feature_eng(df, train, test, train_idx, test_idx, parent_dir=PARENT_DIR):
     # FEATURE ENGINEERING - APPLICANT LEVEL
     df = add_features(df)
     # Check - do engineered features have any missing?
+    print("Check after Feature Engineering")
     print(df.iloc[:, -20:].describe())
 
     # Build train, test splits - Save output
@@ -117,13 +104,33 @@ def feature_eng(df, train, test, train_idx, test_idx, parent_dir=PARENT_DIR):
     train.to_csv(parent_dir / 'processed' / 'train_apps_ext.csv.zip')
     test.to_csv(parent_dir / 'processed' / 'test_apps_ext.csv.zip')
 
-    return df, train, test
+    return df, train_idx, test_idx
 
 
-def data_based_imputation(train, test, parent_dir=PARENT_DIR):
+def imputation(df, train_idx, test_idx, parent_dir=PARENT_DIR):
     """
-    DATA-BASED IMPUTATION - also dealing with missing for quantitative variables. Takes as input train/test_raw_apps.csv.zip, saves output as train/test_apps_ml.csv.zip
+    IMPUTATION - also dealing with missing for quantitative variables. Takes as input train/test_raw_apps.csv.zip, saves output as train/test_apps_ml.csv.zip
     """
+    # NON DATA-BASED IMPUTATION
+    # Impute NANs in bureau applications as zeros - reasonable, since it is the mode
+    bureau_cols = [col for col in df.columns if 'BUREAU' in col]
+    for col in bureau_cols:
+        df.loc[pd.isna(df[col]), col] = 0
+    # check
+    # missing_bureau = df[bureau_cols].isna().sum()
+
+    # Impute own car age as zero when not having a car
+    # relative frequencies - almost all missing in own car age do not have a car, except 5 obs
+    # have_car_by_car_age = train.groupby(["FLAG_OWN_CAR", "OWN_CAR_AGE"], dropna=False).size().reset_index()
+    df.loc[
+        (df.FLAG_OWN_CAR == "N") & pd.isna(df['OWN_CAR_AGE']), 
+        'OWN_CAR_AGE'] = 0
+    
+    # DATA-BASED IMPUTATION
+    # Recreate train, test splits
+    train = df.iloc[train_idx, ]
+    test = df.iloc[test_idx, ]
+
     # Split into X, y
     X_train, y_train = train.loc[:, train.columns != 'TARGET'], train.TARGET
     X_test, y_test = test.loc[:, test.columns != 'TARGET'], test.TARGET
@@ -178,11 +185,11 @@ def data_based_imputation(train, test, parent_dir=PARENT_DIR):
 if __name__ == "__main__":
     # NOTE - these functions have side effects - saving outputs in parent_dir (PARENT_DIR by default)
     df, train, test, train_idx, test_idx = create_train_test_split()
-    df, train, test = feature_eng(df, train, test, train_idx, test_idx)
+    df, train_idx, test_idx = feature_eng(df, train_idx, test_idx)
     # Used to save running time
     # train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_ext.csv.zip', compression="zip", index_col=CURRENT_ID)
     # test = pd.read_csv(PARENT_DIR / 'processed' / 'test_apps_ext.csv.zip', compression="zip", index_col=CURRENT_ID)
-    data_based_imputation(train, test)
+    # imputation(train_idx, test_idx)
 
 
 
