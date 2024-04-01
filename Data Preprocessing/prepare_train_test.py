@@ -69,7 +69,7 @@ def feature_eng(df, train, test, train_idx, test_idx, parent_dir=PARENT_DIR):
         (df.FLAG_OWN_CAR == "N") & pd.isna(df['OWN_CAR_AGE']), 
         'OWN_CAR_AGE'] = 0
 
-    # Re-categorise Hour appr process
+    # Re-categorise Application Start Hour
     # Define function to map hour to time of day
     def map_time_of_day(hour):
         if 6 <= hour < 12:
@@ -83,8 +83,17 @@ def feature_eng(df, train, test, train_idx, test_idx, parent_dir=PARENT_DIR):
 
     # Apply the function to create a new column
     df['DAYTIME_PROCESS_START'] = df['HOUR_APPR_PROCESS_START'].apply(map_time_of_day)
-    df.drop(columns='HOUR_APPR_PROCESS_START', inplace=True)
 
+    # Re-categorise Application Start Weekday
+    df['WORKDAY_PROCESS_START'] = "Workday"
+    # if weekday either saturday or sunday, classify as weekend
+    df.loc[
+        df["WEEKDAY_APPR_PROCESS_START"].isin(["SATURDAY", "SUNDAY"]), 
+        'WORKDAY_PROCESS_START'] = "Weekend"
+
+    # drop original hour and workday features
+    df.drop(columns=['HOUR_APPR_PROCESS_START', 'WEEKDAY_APPR_PROCESS_START'], inplace=True)
+        
     # Drop variables with more than 51% missing (slightly more than half)
     max_missing = .51
     include = ["EXT_SOURCE_1"]
