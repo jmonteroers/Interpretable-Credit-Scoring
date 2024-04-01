@@ -22,11 +22,6 @@ def create_train_test_split(parent_dir=PARENT_DIR, test_size=0.3):
     df = pd.read_csv(parent_dir / 'application_train.csv.zip', compression='zip')
     df.set_index("SK_ID_CURR", inplace=True)
 
-    # Filter out rows without goods price - to homogenise the dataset
-    n_without_goods_price = sum(pd.isna(df.AMT_GOODS_PRICE))
-    print(f"Observations without price of goods dropped {n_without_goods_price}")
-    df = df.loc[~pd.isna(df.AMT_GOODS_PRICE), ]
-
     # After filtering, apply train/test split, to avoid data leak
     sss = StratifiedShuffleSplit(n_splits=1, test_size=test_size, random_state=RANDOM_SEED)
 
