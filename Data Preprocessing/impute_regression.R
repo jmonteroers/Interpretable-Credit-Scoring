@@ -9,7 +9,7 @@
 # LB_Credit_Length and LTV
 
 # Assumes that the working directory has been set to where the input datasets are
-# Saves output in same folder
+# Saves output in the same folder
 
 library(recipes)
 
@@ -51,11 +51,14 @@ knn_rec <- recipe(TARGET ~ ., data = training) %>%
 # Prepare and bake the datasets
 trained_knn_rec <- prep(knn_rec, training = training)
 training <- bake(trained_knn_rec, new_data = training)
-testing <- bake(trained_knn_rec, new_data = training)
+testing <- bake(trained_knn_rec, new_data = testing)
 
 # Recreate LTV and LB_Credit_Length
 training["LTV"] <- training$AMT_CREDIT / training$AMT_GOODS_PRICE
 training["LB_Credit_Length"] <- training$AMT_CREDIT / training$AMT_ANNUITY
+
+testing["LTV"] <- testing$AMT_CREDIT / testing$AMT_GOODS_PRICE
+testing["LB_Credit_Length"] <- testing$AMT_CREDIT / testing$AMT_ANNUITY
 
 # Final checks - are there any missing vals?
 print("After")
