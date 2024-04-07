@@ -37,7 +37,6 @@ create_heatmap_cor <- function(df) {
 }
 
 apply_pca <- function(training, test, vars, thres = .8) {
-  # Apply PCA using ... as filters
   # Note: imputing missing values using mean to avoid losing much information
   pca_rec <- recipe(TARGET ~ ., data = training) %>%
     step_impute_mean(!!vars) %>%
@@ -54,18 +53,54 @@ apply_pca <- function(training, test, vars, thres = .8) {
   list(training = training, testing = testing, pca_estimates = pca_estimates)
 }
 
+plot_perc_var_exp <- function(pca_estimates, sel_comps = NULL, n_comps = NULL) {
+  var_exp <- tidy(
+    pca_res$pca_estimates, num = 2, type = "variance"
+    )
+  # center on cumulative variance
+  var_exp <- filter(var_exp, terms == "cumulative percent variance")
+  if (!is.null(n_comps)) {
+    var_exp <- var_exp %>% filter(component <= n_comps)
+  }
+  plot <- ggplot(var_exp, aes(component, value)) +
+    geom_line(colour = "darkturquoise") +
+    theme_minimal() +
+    labs(title = "Cumulative Percentage of Variance Explained (%)")
+  if (!is.null(sel_comps)) {
+    plot <- plot + 
+      geom_vline(
+        xintercept = sel_comps, linetype="dashed", 
+        color = "brown1", size=1.25
+        )
+  }
+  plot
+}
+
 # TODO: Extend titles
 heatmap_pca_estimates <- function(pca_estimates, thres_abs, n_comps) {
+  # Plot heatmap of coefficients of PCA components for terms/features. 
+  # - n_comps is the number of components to include, i.e., 1 to n_comp PCs are included
+  # - thres_abs is used to filter terms, so that a term has at least a coefficient with an
+  # absolute value higher than thres_abs of the absolute value of coefficients (quantile-based) for the
+  # number of components selected
   pca_estimates <- tidy(pca_estimates, number = 2)
-  # to simplify chart, only keep coefficients that are larger than
-  # quantile threshold for absolute value
-  median_abs_coef <- quantile(abs(pca_estimates$value), probs = thres_abs)
+  
   # only keep first n_comp principal components
   pca_estimates$component_num <- as.numeric(
     gsub("[^0-9]", "", pca_estimates$component)
   )
   pca_estimates <- pca_estimates %>% 
-    filter(abs(value) > median_abs_coef, component_num <= n_comps)
+    filter(component_num <= n_comps)
+  
+  # to simplify chart, only keep terms with a coefficient with an absolute 
+  # value higher than 100*thres_abs% of the absolute val of coeffs
+  median_abs_coef <- quantile(abs(pca_estimates$value), probs = thres_abs)
+  imp_pca_estimates <- pca_estimates %>% 
+    filter(abs(value) > median_abs_coef)
+  imp_terms <- unique(imp_pca_estimates$terms)
+  pca_estimates <- pca_estimates %>%
+    filter(terms %in% imp_terms)
+  
   # Plot heatmap using ggplot
   plot <- ggplot(pca_estimates, aes(x = component, y = terms, fill = value)) +
     geom_tile(colour = "white") +
@@ -107,4 +142,5 @@ pca_res <- apply_pca(
   )
 
 # Analyse coefficients of PCA for Housing
-heatmap_pca_estimates(pca_res$pca_estimates, .5, 7)
+plot_perc_var_exp(pca_res$pca_estimates, sel_comps = 7)
+heatmap_pca_estimates(pca_res$pca_estimates, .75, 7)
