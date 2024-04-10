@@ -136,7 +136,6 @@ if __name__ == "__main__":
     from pathlib import Path
     PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
     df = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_ext.csv.zip')
-
     # create_report_missing(df, PARENT_DIR / "meta" / "bivariate_report_missing.docx")
     export_missing_pvals(df, PARENT_DIR / "meta" / "bivariate_missing_pvals.tex")
 

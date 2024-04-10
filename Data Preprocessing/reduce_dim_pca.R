@@ -29,8 +29,13 @@ create_heatmap_cor <- function(df) {
   # Plot heatmap using ggplot
   plot <- ggplot(long_cor, aes(Var1, Var2, fill = Correlation)) +
     geom_tile(color = "white") +
+    # scale_fill_gradient2(
+    #   low = "white", high = "blue",
+    #   midpoint = -., limits = c(0,1), name = "Correlation") +
+    scale_fill_viridis_b() +
     theme_minimal() +
-    labs(title = "Correlation Heatmap") +
+    labs(title = "Correlation Heatmap",
+         x = "Variable 1", y = "Variable 2") +
     theme(axis.text.x =element_blank(), axis.text.y = element_blank())
   
   plot
@@ -143,4 +148,4 @@ pca_res <- apply_pca(
 
 # Analyse coefficients of PCA for Housing
 plot_perc_var_exp(pca_res$pca_estimates, sel_comps = 7)
-heatmap_pca_estimates(pca_res$pca_estimates, .75, 7)
+heatmap_pca_estimates(pca_res$pca_estimates, .8, 7)
