@@ -9,14 +9,18 @@
 
 # Assumes that the working directory has been set to where the input datasets are
 # Saves output in the same folder
-
 library(recipes)
 library(tidyr)
+library(dplyr)
 library(reshape2)
 library(ggplot2)
 
 # TODO: Extend titles
-create_heatmap_cor <- function(df) {
+create_heatmap_cor <- function(df, min_cor = NULL) {
+  # min_cor is used to keep the variables that have at least one correlation 
+  # higher in absolute value than min_cor. if min_cor not NULL, returns
+  # the list of variables with high correlation
+  
   # Compute correlation matrix
   correlation_matrix <- cor(df, use = "pairwise.complete.obs")
   # Convert correlation matrix to long format for ggplot
@@ -25,6 +29,17 @@ create_heatmap_cor <- function(df) {
   
   # ensure same order for both columns
   long_cor$Var2 <- factor(long_cor$Var2, levels = rev(unique(long_cor$Var1)))
+  
+  # if min_cor is not null, then filter by that absolute value
+  if (!is.null(min_cor)) {
+    # remove diagonal
+    high_cor <- long_cor %>% filter(Var1 != Var2)
+    # select vars to keep
+    high_cor <- high_cor %>% filter(abs(Correlation) > min_cor)
+    sel_vars <- unique(high_cor$Var1)
+    # filter long_cor based on this selection
+    long_cor <- long_cor %>% filter(Var1 %in% !!sel_vars)
+  }
   
   # Plot heatmap using ggplot
   plot <- ggplot(long_cor, aes(Var1, Var2, fill = Correlation)) +
@@ -38,7 +53,9 @@ create_heatmap_cor <- function(df) {
          x = "Variable 1", y = "Variable 2") +
     theme(axis.text.x =element_blank(), axis.text.y = element_blank())
   
-  plot
+  print(plot)
+  
+  if (!is.null(min_cor)) return(sel_vars)
 }
 
 apply_pca <- function(training, test, vars, thres = .8) {
@@ -122,6 +139,17 @@ heatmap_pca_estimates <- function(pca_estimates, thres_abs, n_comps) {
 # Load data
 training <- read.csv(gzfile("train_apps_imp.csv.gz"))
 testing <- read.csv(gzfile("test_apps_imp.csv.gz"))
+
+## Correlation for training dataset (only numeric)
+# TODO: Repeat analysis after WOE - identify multicolinearity
+numeric_training <- select_if(training, is.numeric)
+high_cor_vars <- create_heatmap_cor(numeric_training, min_cor = .9)
+
+num_without_housing <- select(
+  numeric_training,
+  !ends_with("_MODE") & !ends_with("_MEDI") & !ends_with("_AVG")
+)
+high_cor_vars_without_housing <- create_heatmap_cor(num_without_housing, min_cor = .9)
 
 ## PCA for Housing Variables
 
