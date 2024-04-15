@@ -99,6 +99,8 @@ def feature_eng(df, train_idx, test_idx, parent_dir=PARENT_DIR):
 def imputation(df, train_idx, test_idx, parent_dir=PARENT_DIR):
     """
     IMPUTATION - also dealing with missing for quantitative variables. Takes as input train/test_raw_apps.csv.zip, saves output as train/test_apps_ml.csv.zip
+
+    TODO: need to update mappings to numerical, categorical. Maybe use train_summary_applications_ext 
     """
     # NON DATA-BASED IMPUTATION
     # Impute NANs in bureau applications as zeros - reasonable, since it is the mode
@@ -134,7 +136,7 @@ def imputation(df, train_idx, test_idx, parent_dir=PARENT_DIR):
     # NOTE: add to these lists engineered features as needed
     application_numeric_feats = ["LTV", "LB_Credit_Length", "Credit_to_Inc"] 
     applicant_numeric_feats = ["CC_PROP_CONS_CURR", "CC_PROP_CONS_QRT"]
-    extra_cat_feats = ['DAYTIME_PROCESS_START']
+    extra_cat_feats = ['DAYTIME_PROCESS_START', 'WORKDAY_PROCESS_START']
 
     numeric_features += application_numeric_feats + applicant_numeric_feats
     # add daytime to categorical
