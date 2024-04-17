@@ -15,7 +15,7 @@ library(dplyr)
 library(reshape2)
 library(ggplot2)
 
-# TODO: Extend titles
+
 create_heatmap_cor <- function(df, min_cor = NULL) {
   # min_cor is used to keep the variables that have at least one correlation 
   # higher in absolute value than min_cor. if min_cor not NULL, returns
@@ -38,19 +38,15 @@ create_heatmap_cor <- function(df, min_cor = NULL) {
     high_cor <- high_cor %>% filter(abs(Correlation) > min_cor)
     sel_vars <- unique(high_cor$Var1)
     # filter long_cor based on this selection
-    long_cor <- long_cor %>% filter(Var1 %in% !!sel_vars)
+    long_cor <- long_cor %>% filter(Var1 %in% !!sel_vars, Var2 %in% !!sel_vars)
   }
   
   # Plot heatmap using ggplot
   plot <- ggplot(long_cor, aes(Var1, Var2, fill = Correlation)) +
     geom_tile(color = "white") +
-    # scale_fill_gradient2(
-    #   low = "white", high = "blue",
-    #   midpoint = -., limits = c(0,1), name = "Correlation") +
-    scale_fill_viridis_b() +
+    scale_fill_viridis_c() +
     theme_minimal() +
-    labs(title = "Correlation Heatmap",
-         x = "Variable 1", y = "Variable 2") +
+    labs(x = "Variable 1", y = "Variable 2") +
     theme(axis.text.x =element_blank(), axis.text.y = element_blank())
   
   print(plot)
@@ -58,10 +54,8 @@ create_heatmap_cor <- function(df, min_cor = NULL) {
   if (!is.null(min_cor)) return(sel_vars)
 }
 
-apply_pca <- function(training, test, vars, thres = .8) {
-  # Note: imputing missing values using mean to avoid losing much information
+apply_pca <- function(training, testing, vars, thres = .8) {
   pca_rec <- recipe(TARGET ~ ., data = training) %>%
-    step_impute_mean(!!vars) %>%
     step_pca(
       !!vars,
       threshold = thres,
@@ -77,35 +71,35 @@ apply_pca <- function(training, test, vars, thres = .8) {
 
 plot_perc_var_exp <- function(pca_estimates, sel_comps = NULL, n_comps = NULL) {
   var_exp <- tidy(
-    pca_res$pca_estimates, num = 2, type = "variance"
+    pca_res$pca_estimates, num = 1, type = "variance"
     )
-  # center on cumulative variance
+  # center on cumulative percent variance
   var_exp <- filter(var_exp, terms == "cumulative percent variance")
   if (!is.null(n_comps)) {
     var_exp <- var_exp %>% filter(component <= n_comps)
   }
   plot <- ggplot(var_exp, aes(component, value)) +
     geom_line(colour = "darkturquoise") +
-    theme_minimal() +
-    labs(title = "Cumulative Percentage of Variance Explained (%)")
+    theme_minimal()
   if (!is.null(sel_comps)) {
     plot <- plot + 
       geom_vline(
         xintercept = sel_comps, linetype="dashed", 
-        color = "brown1", size=1.25
-        )
+        color = "brown1", linewidth=1.25
+        ) +
+      labs(x = "Component", y = "Cumulative Variance Explained (%)")
   }
   plot
 }
 
-# TODO: Extend titles
+
 heatmap_pca_estimates <- function(pca_estimates, thres_abs, n_comps) {
   # Plot heatmap of coefficients of PCA components for terms/features. 
   # - n_comps is the number of components to include, i.e., 1 to n_comp PCs are included
   # - thres_abs is used to filter terms, so that a term has at least a coefficient with an
   # absolute value higher than thres_abs of the absolute value of coefficients (quantile-based) for the
   # number of components selected
-  pca_estimates <- tidy(pca_estimates, number = 2)
+  pca_estimates <- tidy(pca_estimates, number = 1)
   
   # only keep first n_comp principal components
   pca_estimates$component_num <- as.numeric(
@@ -129,20 +123,21 @@ heatmap_pca_estimates <- function(pca_estimates, thres_abs, n_comps) {
     scale_fill_gradient2(
       low = "blue", mid = "white", high = "red", 
       midpoint = 0, limits = c(-1,1), name = "Coefficient") +
+    labs(x = "Component", y = "Terms") +
     theme_minimal() +
-    labs(title = "PCA Heatmap") +
     theme(panel.grid.major = element_blank())
   
   plot
 }
 
 # Load data
-training <- read.csv(gzfile("train_apps_imp.csv.gz"))
-testing <- read.csv(gzfile("test_apps_imp.csv.gz"))
+training <- read.csv(unzip("train_apps_woe.csv.zip", "train_apps_woe.csv"))
+testing <- read.csv(unzip("test_apps_woe.csv.zip", "test_apps_woe.csv"))
 
-## Correlation for training dataset (only numeric)
-# TODO: Repeat analysis after WOE - identify multicolinearity
-numeric_training <- select_if(training, is.numeric)
+## Correlation for training dataset
+X_train <- subset(training, select=-TARGET)
+X_train <- X_train[, 3:ncol(X_train)]
+numeric_training <- select_if(X_train, is.numeric)
 high_cor_vars <- create_heatmap_cor(numeric_training, min_cor = .9)
 
 num_without_housing <- select(
@@ -154,9 +149,10 @@ high_cor_vars_without_housing <- create_heatmap_cor(num_without_housing, min_cor
 ## PCA for Housing Variables
 
 # Exploratory Heatmap
-# Select data related to the numerical columns for housing
+# Select data related to the numerical columns for housing with high correlation
+housing <- training[, as.character(high_cor_vars)]
 housing <- select(
-  training,
+  housing,
   where(is.numeric) & 
   (ends_with("_MODE") | ends_with("_MEDI") | ends_with("_AVG"))
 )
@@ -164,16 +160,11 @@ housing <- select(
 create_heatmap_cor(housing)
 
 # Apply PCA
-vars_pca_housing <- names(
-  training %>% select(
-    where(is.numeric) & matches(".+_((MODE)|(MEDI)|(AVG))$"))
-  )
-# Note: using na.omit in pca step only relies on 50k observations
-# so imputing mean before applying PCA
+vars_pca_housing <- colnames(housing)
 pca_res <- apply_pca(
-  training, test, vars_pca_housing
+  training, testing, vars_pca_housing
   )
 
 # Analyse coefficients of PCA for Housing
-plot_perc_var_exp(pca_res$pca_estimates, sel_comps = 7)
-heatmap_pca_estimates(pca_res$pca_estimates, .8, 7)
+plot_perc_var_exp(pca_res$pca_estimates, sel_comps = 3)
+heatmap_pca_estimates(pca_res$pca_estimates, .8, 3)
