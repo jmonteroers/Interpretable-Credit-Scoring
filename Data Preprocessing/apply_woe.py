@@ -108,6 +108,10 @@ binning_table = pd.concat([cat_binning_table, num_binning_table], axis=0)
 # Save WoE mapping
 binning_table.to_csv(PARENT_DIR / "meta" / "woe_mapping.csv.zip", index=False)
 
+# Remove columns with a single WoE value in train
+train = train.loc[:, train.nunique(axis=0) != 1]
+test = test.loc[:, train.columns.values]
+
 # Save processed train/test datasets
 train.to_csv(PARENT_DIR / "processed" / "train_apps_woe.csv.zip", index=False)
 test.to_csv(PARENT_DIR / "processed" / "test_apps_woe.csv.zip", index=False)
