@@ -50,6 +50,7 @@ def get_ftest(df, feat):
     try:
         logit_fit = logit_model.fit()
     except Exception as e:
+        print(e)
         print(f"Error fitting logit for {feat}, returning p-value of 1.")
         return 1.
     # carry out f-test
@@ -58,8 +59,14 @@ def get_ftest(df, feat):
     return logit_fit.f_test(contrast_mx).pvalue
 
 
+def export_to_latex(df, outpath):
+    styler = df.style.\
+             format(escape="latex").\
+             hide(axis="index")
+    styler.to_latex(outpath, hrules=True)
 
-def export_significance_test(df, outpath):
+
+def export_significance_test(df, outpath_ns, outpath_s):
     """Writes the F-test of an overall significance test of a simple regression on TARGET on a predictor"""
     # Define List of Variables to Include
     excl_vars = ["SK_ID_CURR", "TARGET", "Unnamed: 0"]
@@ -70,15 +77,19 @@ def export_significance_test(df, outpath):
 
     outdf["P-Values"] = outdf["Variable"].apply(lambda v: get_ftest(df, v))
 
-    # Sort by p-value, filter?
-    outdf.sort_values("P-Values", inplace=True)
+    # Create P.Value Ranges
+    bins = [-np.inf, 1e-6, 0.0001, 0.001, 0.01, 0.05, 0.1, 0.25, 0.5, 1.]
+    outdf["P-Value Ranges"] = pd.cut(outdf["P-Values"], bins)
 
-    # Save to output file
-    outdf.style.\
-        format(escape="latex").\
-        format(subset="P-Values", precision=3).\
-        hide(axis="index").\
-        to_latex(outpath, hrules=True)
+    # Save non-significant at 0.01 level
+    df_nsig = outdf.loc[outdf["P-Values"] >= 0.01]
+    summary_nsig = df_nsig.groupby('P-Value Ranges')['Variable'].agg(lambda x: ", ".join(list(x.unique()))).reset_index()
+    export_to_latex(summary_nsig, outpath_ns)
+
+    # Save top-significant
+    df_sig = outdf.loc[outdf["P-Values"] < 0.01]
+    summary_sig = df_sig.groupby('P-Value Ranges')['Variable'].agg(lambda x: ", ".join(list(x.unique()))).reset_index()
+    export_to_latex(summary_sig, outpath_s)
 
 
 if __name__ == "__main__":
@@ -87,10 +98,14 @@ if __name__ == "__main__":
     from pathlib import Path
 
     PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
-    df = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_ext.csv.zip')
+    df = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_woe.csv.zip')
 
     # F-test table with p-values
-    export_significance_test(df, PARENT_DIR / "meta" / "bivariate_significance_pvals.tex")
+    export_significance_test(
+        df, 
+        PARENT_DIR / "meta" / "bivariate_nonsig_pvals.tex",
+        PARENT_DIR / "meta" / "bivariate_topsig_pvals.tex")
+    breakpoint()
     # plots to illustrate bivariate effects
     create_density_by_default(df, "LTV", bw_method="silverman", ind=np.arange(.1, 2., .01))
     create_barplot_perc_def(df, "FLAG_WORK_PHONE")
