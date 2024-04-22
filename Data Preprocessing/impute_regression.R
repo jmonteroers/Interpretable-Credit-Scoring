@@ -34,7 +34,7 @@ print(summary(testing[, target_columns]))
 
 # drop LTV and LB_Credit_Length since they will be recreated
 # to avoid using them as predictors (redundant information)
-training <- training[, !(colnames(training) %in% c("X", "LB_Credit_Length", "LTV"))]
+training <- training[, !(colnames(training) %in% c("LB_Credit_Length", "LTV"))]
 
 
 # Build recipe, add knn step with 5 neighbors
@@ -66,5 +66,5 @@ print(summary(training[, target_columns]))
 print(summary(testing[, target_columns]))
 
 # Save results
-write.csv(training, file=gzfile("train_apps_imp.csv.gz"))
-write.csv(testing, file=gzfile("test_apps_imp.csv.gz"))
+write.csv(training, file=gzfile("train_apps_imp.csv.gz"), row.names = F)
+write.csv(testing, file=gzfile("test_apps_imp.csv.gz"), row.names = F)

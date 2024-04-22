@@ -86,12 +86,12 @@ def feature_eng(df, train_idx, test_idx, parent_dir=PARENT_DIR):
     print("Check after Feature Engineering")
     print(df.iloc[:, -20:].describe())
 
-    # Build train, test splits - Save output
+    # Rebuild train, test splits - Save output
     train = df.iloc[train_idx, ]
     test = df.iloc[test_idx, ]
     # on-the-fly compression by extension
-    train.to_csv(parent_dir / 'processed' / 'train_apps_ext.csv.zip')
-    test.to_csv(parent_dir / 'processed' / 'test_apps_ext.csv.zip')
+    train.to_csv(parent_dir / 'processed' / 'train_apps_ext.csv.zip', index=False)
+    test.to_csv(parent_dir / 'processed' / 'test_apps_ext.csv.zip', index=False)
 
     return df, train_idx, test_idx
 
