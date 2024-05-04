@@ -109,6 +109,10 @@ binning_table = pd.concat([cat_binning_table, num_binning_table], axis=0)
 binning_table.to_csv(PARENT_DIR / "meta" / "woe_mapping.csv.zip", index=False)
 
 # Remove columns with a single WoE value in train
+logger.info(
+    f"Dropping the variables: {train.columns[train.nunique(axis=0) == 1]} since they result in a single bin after WoE"
+    )
+breakpoint()
 train = train.loc[:, train.nunique(axis=0) != 1]
 test = test.loc[:, train.columns.values]
 
