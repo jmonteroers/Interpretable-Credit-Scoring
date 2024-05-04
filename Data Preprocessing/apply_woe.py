@@ -40,9 +40,12 @@ def fit_woe_transform(train: pd.DataFrame, pred_name: str, type: str):
         optb = OptimalBinning(
                 name=pred_name, dtype="categorical", solver="mip", cat_cutoff=0.1,
                 random_state=RANDOM_SEED
-        )
+            )
     else:
-        optb = OptimalBinning(name=pred_name, dtype="numerical", solver="cp", random_state=RANDOM_SEED)
+        optb = OptimalBinning(
+            name=pred_name, monotonic_trend="auto_asc_desc", 
+            dtype="numerical", solver="cp", random_state=RANDOM_SEED
+            )
 
     optb.fit(x, y)
 
@@ -106,13 +109,12 @@ num_binning_table["Type"] = "Numerical"
 binning_table = pd.concat([cat_binning_table, num_binning_table], axis=0)
 
 # Save WoE mapping
-binning_table.to_csv(PARENT_DIR / "meta" / "woe_mapping.csv.zip", index=False)
+binning_table.to_excel(PARENT_DIR / "meta" / "woe_mapping.xlsx", index=False)
 
 # Remove columns with a single WoE value in train
 logger.info(
     f"Dropping the variables: {train.columns[train.nunique(axis=0) == 1]} since they result in a single bin after WoE"
     )
-breakpoint()
 train = train.loc[:, train.nunique(axis=0) != 1]
 test = test.loc[:, train.columns.values]
 

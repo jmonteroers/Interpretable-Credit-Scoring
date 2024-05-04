@@ -17,7 +17,11 @@ df = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_imp.csv.gz', compression
 # Fitting
 x = df["LTV"].values
 y = df[TARGET].values
-optb = OptimalBinning(name="LTV", dtype="numerical", solver="cp", random_state=RANDOM_SEED)
+optb = OptimalBinning(
+    name="LTV", dtype="numerical", solver="cp", 
+    monotonic_trend="auto_asc_desc",
+    random_state=RANDOM_SEED
+    )
 optb.fit(x, y)
 # check the status
 if optb.status != "OPTIMAL":
