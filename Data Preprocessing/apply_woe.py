@@ -71,6 +71,39 @@ def append_binning_table(optb, global_binning_table, pred_name):
     return global_binning_table
 
 
+def check_monotonicity(woe_map, verbose=False) -> bool:
+    # Filter binning table
+    # drop totals, Special, and Missing
+    woe_map = woe_map.loc[
+        ~woe_map.Bin.isin(["", "Special", "Missing"])
+        ]
+    # keep only Numerical (with order)
+    woe_map = woe_map.loc[woe_map.Type == "Numerical"]
+
+    # Define a function to check monotonicity
+    def check_monotonicity_g(group):
+        return (
+            group['Event rate'].is_monotonic_increasing
+            or group['Event rate'].is_monotonic_decreasing
+        )
+
+    # Group by 'group' column and apply the check_monotonic function
+    monotonicity_check = woe_map.groupby('Attribute').apply(check_monotonicity_g)
+
+    # If verbose, print out non-monotonic groups
+    if verbose:
+        non_monotonic_attrs = monotonicity_check[~monotonicity_check].index.tolist()
+        if non_monotonic_attrs:
+            print(
+                f"Non-monotonic event rate for attributes: {non_monotonic_attrs}]"
+            )
+        else:
+            print("All variables display a monotonic event rate.")
+
+    # Return if all groups that display monotonic changes
+    return monotonicity_check.all()
+
+
 # Load datasets
 train = pd.read_csv(PARENT_DIR / "processed" / "train_apps_imp.csv.gz", compression="gzip")
 test  = pd.read_csv(PARENT_DIR / "processed" / "test_apps_imp.csv.gz", compression="gzip")
@@ -107,6 +140,9 @@ with Timer("Non parallel WoE for Numerical"):
 cat_binning_table["Type"] = "Categorical"
 num_binning_table["Type"] = "Numerical"
 binning_table = pd.concat([cat_binning_table, num_binning_table], axis=0)
+
+# Check monotonicity
+monotonicity_check  = check_monotonicity(binning_table, verbose=True)
 
 # Save WoE mapping
 binning_table.to_excel(PARENT_DIR / "meta" / "woe_mapping.xlsx", index=False)
