@@ -67,7 +67,7 @@ if __name__ == "__main__":
     from pathlib import Path
 
     PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
-    train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_woe.csv.zip', compression="zip")
+    train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_iv.csv.zip', compression="zip")
     train = train.drop(columns=["SK_ID_CURR"])
     bt = pd.read_excel(PARENT_DIR / "meta" / "woe_mapping.xlsx")
 

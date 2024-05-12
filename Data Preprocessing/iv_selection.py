@@ -1,5 +1,5 @@
 """
-This script finds the IV of each variable, and then takes as input the pre-processed dataset
+This script finds the IV of each variable, then takes as input the pre-processed dataset
 and then filters out any variable with IV lower than 0.02 (indicating it to be generally unpredictive, Siddiqi, 2017)
 """
 
@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 TARGET = "TARGET"
 
-woe_res = pd.read_csv(PARENT_DIR / "meta" / "woe_mapping.csv.zip")
+woe_res = pd.read_excel(PARENT_DIR / "meta" / "woe_mapping.xlsx")
 # select rows referring to Totals
 woe_totals = woe_res.loc[woe_res.Bin.isna()]
 
@@ -25,7 +25,7 @@ iv.sort_values("IV", ascending=False, inplace=True)
 
 # Follow Siddiqi (2017), apply IV filter for IV less than 0.02 (generally unpredictive)
 iv_sel = iv.loc[iv.IV >= 0.02]
-logger.info(f"After IV filtering, {len(iv_sel)} have been selected")
+logger.info(f"After IV filtering, {len(iv_sel)} features have been selected")
 
 # Export to LaTeX table
 outpath_table = PARENT_DIR / "meta" / "iv_table.tex"
@@ -35,6 +35,15 @@ iv_sel.style.\
        hide(axis="index").\
        to_latex(outpath_table, hrules=True)
 
-# TODO: Apply filtering
+# Apply filtering
+# load dataset
+from pathlib import Path
+PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
+train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_woe.csv.zip', compression="zip")
+# filter
+sel_attributes = iv_sel.Attribute.unique().tolist()
+train = train[["SK_ID_CURR", TARGET] + sel_attributes]
+# save
+train.to_csv(PARENT_DIR / "processed" / "train_apps_iv.csv.zip", index=False)
 
 breakpoint()
