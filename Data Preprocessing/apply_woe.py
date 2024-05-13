@@ -38,13 +38,14 @@ def fit_woe_transform(train: pd.DataFrame, pred_name: str, type: str):
 
     if type == "categorical":
         optb = OptimalBinning(
-                name=pred_name, dtype="categorical", solver="mip", cat_cutoff=0.1,
-                random_state=RANDOM_SEED
+                name=pred_name, dtype="categorical", solver="mip", cat_cutoff=0.05,
+                min_prebin_size=0.01, random_state=RANDOM_SEED
             )
     else:
         optb = OptimalBinning(
             name=pred_name, monotonic_trend="auto_asc_desc", 
-            dtype="numerical", solver="cp", random_state=RANDOM_SEED
+            dtype="numerical", solver="cp", random_state=RANDOM_SEED,
+            min_prebin_size=0.01
             )
 
     optb.fit(x, y)

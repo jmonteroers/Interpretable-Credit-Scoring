@@ -36,7 +36,10 @@ if __name__ == "__main__":
 
     # Print frequency table
     # Cannot have more than one bin due to high frequency of zero value
+    # requires about 200 quantiles (0.5% min size bins)
     print(df["N_BUREAU_CURR_BAD_30"].value_counts())
+    # requires about 1000 quantiles (0.1% min size bins)
     print(df["N_HC_BAD_30_YR"].value_counts())
+    # with minimum 1% min size it displays clear effect on defaults
     print(df["TIMES_CC_OVER_LIMIT_QRT"].value_counts())
     
