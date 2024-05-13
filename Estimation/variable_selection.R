@@ -2,8 +2,6 @@
 # Input: Dataset after IV selection
 # Output: Selected Model for Scorecard Estimation (_step)
 # It assumes that the directory has been changes to the path of the input
-
-library(MASS)
 library(tictoc)
 
 # Load dataset
@@ -23,18 +21,20 @@ formula_full <- as.formula(
 # Forward Selection
 null_model <- glm(TARGET ~ 1, data = train, family = binomial)
 tic("Forward Selection")
-fit_forward <- stepAIC(
-  null_model, direction = "forward", 
-  scope=list(lower = ~ 1, upper = formula_full), trace = 0
+fit_forward <- step(
+  null_model, direction = "forward",
+  scope=list(lower = ~ 1, upper = formula_full), trace = 1,
+  test = "F"
   )
 toc()
 
 # Bidirectional Selection
 tic("Bidirectional Selection")
 null_model <- glm(TARGET ~ 1, data = train, family = binomial)
-fit_forward <- stepAIC(
+fit_both <- step(
   null_model, direction = "both", 
-  scope=list(lower = ~ 1, upper = formula_full), trace = T
+  scope=list(lower = ~ 1, upper = formula_full), trace = 1,
+  test = "F"
 )
 toc()
 
@@ -46,5 +46,5 @@ get_selected_variables <- function(fit) {
   return(selected_vars)
 }
 
-get_selected_variables(fit_forward)
-get_selected_variables(fit_both)
+sel_vars_forward <- get_selected_variables(fit_forward)
+sel_vars_both <- get_selected_variables(fit_both)
