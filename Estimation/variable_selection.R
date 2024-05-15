@@ -13,28 +13,41 @@ indep_vars <- colnames(train)[2:ncol(train)]
 formula_full <- as.formula(
   paste("~", paste(indep_vars, collapse = " + ")))
 
+# AIC
+
 # Backward Selection
 # full_model <- glm(TARGET ~ ., data = train, family = binomial)
 # fit_backward <- stepAIC(
 #   full_model, direction = "backward", trace = T)
 
 # Forward Selection
-null_model <- glm(TARGET ~ 1, data = train, family = binomial)
-tic("Forward Selection")
-fit_forward <- step(
-  null_model, direction = "forward",
-  scope=list(lower = ~ 1, upper = formula_full), trace = 1,
-  test = "F"
-  )
-toc()
+# null_model <- glm(TARGET ~ 1, data = train, family = binomial)
+# tic("Forward Selection")
+# fit_forward <- step(
+#   null_model, direction = "forward",
+#   scope=list(lower = ~ 1, upper = formula_full), trace = 1,
+#   test = "F"
+#   )
+# toc()
 
 # Bidirectional Selection
-tic("Bidirectional Selection")
+tic("AIC, Bidirectional Selection")
 null_model <- glm(TARGET ~ 1, data = train, family = binomial)
-fit_both <- step(
+aic_fit_both <- step(
   null_model, direction = "both", 
   scope=list(lower = ~ 1, upper = formula_full), trace = 1,
   test = "F"
+)
+toc()
+
+# BIC
+k_bic <- log(nrow(train))
+tic("BIC, Bidirectional Selection")
+null_model <- glm(TARGET ~ 1, data = train, family = binomial)
+bic_fit_both <- step(
+  null_model, direction = "both", 
+  scope=list(lower = ~ 1, upper = formula_full), trace = 1,
+  test = "F", k = k_bic
 )
 toc()
 
@@ -46,5 +59,12 @@ get_selected_variables <- function(fit) {
   return(selected_vars)
 }
 
-sel_vars_forward <- get_selected_variables(fit_forward)
-sel_vars_both <- get_selected_variables(fit_both)
+sel_vars_aic_both <- get_selected_variables(aic_fit_both)
+sel_vars_bic_both <- get_selected_variables(bic_fit_both)
+
+# Export train dataset with selected variables
+train_aic <- train[, c("TARGET", sel_vars_aic_both)]
+write.csv(train_aic, file=gzfile("train_apps_aic.csv.gz"), row.names = F)
+
+train_bic <- train[, c("TARGET", sel_vars_bic_both)]
+write.csv(train_bic, file=gzfile("train_apps_bic.csv.gz"), row.names = F)
