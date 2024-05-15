@@ -20,6 +20,7 @@ y = df[TARGET].values
 optb = OptimalBinning(
     name="LTV", dtype="numerical", solver="cp", 
     monotonic_trend="auto_asc_desc",
+    min_prebin_size=0.01,
     random_state=RANDOM_SEED
     )
 optb.fit(x, y)
@@ -34,7 +35,7 @@ binning_table.plot(metric="woe", show_bin_labels=True)
 plt.show()
 
 # Comparison vs existing WoE - same!
-woe_mapping = pd.read_csv(PARENT_DIR / 'meta' / 'woe_mapping.csv.zip')
+woe_mapping = pd.read_excel(PARENT_DIR / 'meta' / 'woe_mapping.xlsx')
 woe_mapping = woe_mapping.loc[woe_mapping["Attribute"] == "LTV", ]
 print(woe_mapping)
 

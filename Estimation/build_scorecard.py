@@ -63,15 +63,26 @@ def check_scorecard(bt_with_points):
     print(f"Points have been successfully added to {n_attrs_points} attributes.")
 
 
+def clean_scorecard(bt_with_points):
+    """Remove 'Special' bin and rows without points"""
+    clean_sc = bt_with_points.loc[
+        (bt_with_points["Bin"] != "Special") & ~bt_with_points["Points"].isna()
+    ]
+    return clean_sc
+
+
 if __name__ == "__main__":
     from pathlib import Path
 
     PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
-    train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_iv.csv.zip', compression="zip")
-    train = train.drop(columns=["SK_ID_CURR"])
-    bt = pd.read_excel(PARENT_DIR / "meta" / "woe_mapping.xlsx")
+    train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_bic.csv.gz', compression="gzip")
+    bt = pd.read_excel(PARENT_DIR / "meta" / "woe_mapping.xlsx", index=False)
 
     scorecard = build_scorecard(train, bt)
     check_scorecard(scorecard)
+    scorecard = clean_scorecard(scorecard)
+
+    # Export scorecard as Excel
+    scorecard.to_excel(PARENT_DIR / 'meta' / 'scorecard_bic.xlsx')
     breakpoint()
 
