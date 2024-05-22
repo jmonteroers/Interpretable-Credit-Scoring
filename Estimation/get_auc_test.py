@@ -22,7 +22,7 @@ def fit_logit(train):
     # Get Xs
     X_train = train.drop(columns=TARGET)
     # Estimate Logistic Regressions
-    logit = sm.Logit(train.TARGET == 0., X_train)
+    logit = sm.Logit(train.TARGET, X_train)
     return logit.fit()
 
 
@@ -52,6 +52,16 @@ fit_bic = fit_logit(train_bic)
 train_roc_auc_bic = get_roc_auc(fit_bic, train_bic)
 test_roc_auc_bic = get_roc_auc(fit_bic, test)
 
+# Output results to LaTeX
+roc_auc = {
+    'Train': [train_roc_auc_aic, train_roc_auc_bic],
+    'Test': [test_roc_auc_aic, test_roc_auc_bic]
+}
+# Create the DataFrame with rows as 'AIC' and 'BIC'
+df_roc_auc = pd.DataFrame(roc_auc, index=['AIC', 'BIC'])
+# Convert the DataFrame to LaTeX
+latex_output = df_roc_auc.to_latex()
+print(latex_output)
 breakpoint()
 
 # Save estimated Models as LaTeX files
