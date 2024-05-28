@@ -8,6 +8,7 @@ import pandas as pd
 from optbinning import OptimalBinning
 import time
 import logging
+from datetime import datetime
 
 from add_features.utils import PARENT_DIR
 
@@ -16,6 +17,7 @@ logging.basicConfig(level=logging.INFO)
 
 TARGET = "TARGET"
 RANDOM_SEED = 1234
+DEFAULT_MIN_PREBIN_SIZE = 0.025
 
 class Timer(object):
     "Borrowed from @Bendersky, stackoverflow"
@@ -31,7 +33,7 @@ class Timer(object):
         logger.info('Elapsed: %s' % (time.time() - self.tstart))
 
 
-def fit_woe_transform(train: pd.DataFrame, pred_name: str, type: str):
+def fit_woe_transform(train: pd.DataFrame, pred_name: str, type: str, min_prebin_size):
     "type is either 'numerical' or 'categorical'. Returns fitted binning object"
     x = train[pred_name].values
     y = train.TARGET.values
@@ -39,13 +41,13 @@ def fit_woe_transform(train: pd.DataFrame, pred_name: str, type: str):
     if type == "categorical":
         optb = OptimalBinning(
                 name=pred_name, dtype="categorical", solver="mip", cat_cutoff=0.05,
-                min_prebin_size=0.01, random_state=RANDOM_SEED
+                min_prebin_size=min_prebin_size, max_pvalue=0.01, random_state=RANDOM_SEED
             )
     else:
         optb = OptimalBinning(
             name=pred_name, monotonic_trend="auto_asc_desc", 
             dtype="numerical", solver="cp", random_state=RANDOM_SEED,
-            min_prebin_size=0.01
+            min_prebin_size=min_prebin_size, max_pvalue=0.01
             )
 
     optb.fit(x, y)
@@ -115,12 +117,23 @@ meta = pd.read_csv(PARENT_DIR / "meta" / "train_summary_applications_ext.csv")
 # Get categorical columns
 cat_columns = meta.loc[meta["Data Type"].isin(["Categorical", "Binary"]), "Attribute"].unique().tolist()
 num_columns = meta.loc[meta["Data Type"].isin(["Quantitative"]), "Attribute"].unique().tolist()
-
+ 
+# Exceptions to default minimum prebins - otherwise, have a single prebin
+exc_min_prebin_size = {
+    'N_BUREAU_CURR_BAD_30': 0.005,
+    'N_BUREAU_CURR_BAD_60': 0.0025,
+    'N_HC_BAD_30_CURR': 0.00025,
+    'N_HC_BAD_30_QRT': 0.00025,
+    'N_HC_BAD_30_YR': 0.00025,
+    'COUNT_CC_OVER_LIMIT_CURR': 0.01,
+    'TIMES_CC_OVER_LIMIT_QRT': 0.01
+}
 # Transform into woe - non-parallel
 with Timer("Non parallel WoE for Categorical"):
     cat_binning_table = None
     for cat in cat_columns:
-        cat_optb = fit_woe_transform(train, cat, "categorical")
+        min_prebin_size = exc_min_prebin_size[cat] if cat in exc_min_prebin_size else DEFAULT_MIN_PREBIN_SIZE
+        cat_optb = fit_woe_transform(train, cat, "categorical", min_prebin_size)
         train[cat] = cat_optb.transform(train[cat], metric="woe")
         test[cat] = cat_optb.transform(test[cat], metric="woe")
         cat_binning_table = append_binning_table(
@@ -130,7 +143,8 @@ with Timer("Non parallel WoE for Categorical"):
 with Timer("Non parallel WoE for Numerical"):
     num_binning_table = None
     for num in num_columns:
-        num_optb = fit_woe_transform(train, num, "numerical")
+        min_prebin_size = exc_min_prebin_size[num] if num in exc_min_prebin_size else DEFAULT_MIN_PREBIN_SIZE
+        num_optb = fit_woe_transform(train, num, "numerical", min_prebin_size)
         train[num] = num_optb.transform(train[num], metric="woe")
         test[num] = num_optb.transform(test[num], metric="woe")
         num_binning_table = append_binning_table(
@@ -146,7 +160,7 @@ binning_table = pd.concat([cat_binning_table, num_binning_table], axis=0)
 monotonicity_check  = check_monotonicity(binning_table, verbose=True)
 
 # Save WoE mapping
-binning_table.to_excel(PARENT_DIR / "meta" / "woe_mapping.xlsx", index=False)
+binning_table.to_excel(PARENT_DIR / "meta" / "woe_map" / f"woe_mapping_{datetime.now().strftime("%d_%m_%Y")}.xlsx", index=False)
 
 # Remove columns with a single WoE value in train
 logger.info(

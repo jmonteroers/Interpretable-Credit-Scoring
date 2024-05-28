@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO)
 
 TARGET = "TARGET"
 
-woe_res = pd.read_excel(PARENT_DIR / "meta" / "woe_mapping.xlsx")
+woe_res = pd.read_excel(PARENT_DIR / "meta" / "woe_map" / "woe_mapping.xlsx")
 # select rows referring to Totals
 woe_totals = woe_res.loc[woe_res.Bin.isna()]
 
