@@ -17,7 +17,9 @@ logging.basicConfig(level=logging.INFO)
 
 TARGET = "TARGET"
 RANDOM_SEED = 1234
-DEFAULT_MIN_PREBIN_SIZE = 0.025
+DEFAULT_MIN_PREBIN_SIZE = 0.05
+DEFAULT_MAX_PVAL = 0.005
+DEFAULT_CAT_CUTOFF = 0.05
 
 class Timer(object):
     "Borrowed from @Bendersky, stackoverflow"
@@ -40,14 +42,14 @@ def fit_woe_transform(train: pd.DataFrame, pred_name: str, type: str, min_prebin
 
     if type == "categorical":
         optb = OptimalBinning(
-                name=pred_name, dtype="categorical", solver="mip", cat_cutoff=0.05,
-                min_prebin_size=min_prebin_size, max_pvalue=0.01, random_state=RANDOM_SEED
+                name=pred_name, dtype="categorical", solver="mip", cat_cutoff=DEFAULT_CAT_CUTOFF,
+                min_prebin_size=min_prebin_size, max_pvalue=DEFAULT_MAX_PVAL, random_state=RANDOM_SEED
             )
     else:
         optb = OptimalBinning(
             name=pred_name, monotonic_trend="auto_asc_desc", 
             dtype="numerical", solver="cp", random_state=RANDOM_SEED,
-            min_prebin_size=min_prebin_size, max_pvalue=0.01
+            min_prebin_size=min_prebin_size, max_pvalue=DEFAULT_MAX_PVAL
             )
 
     optb.fit(x, y)
@@ -163,6 +165,9 @@ monotonicity_check  = check_monotonicity(binning_table, verbose=True)
 binning_table.to_excel(PARENT_DIR / "meta" / "woe_map" / f"woe_mapping_{datetime.now().strftime("%d_%m_%Y")}.xlsx", index=False)
 
 # Remove columns with a single WoE value in train
+# Check 29/05/24
+# Have more than 5% in each category, removed due to non-significance
+# REG_REGION_NOT_WORK_REGION, FLAG_EMAIL, WORKDAY_PROCESS_START
 logger.info(
     f"Dropping the variables: {train.columns[train.nunique(axis=0) == 1]} since they result in a single bin after WoE"
     )

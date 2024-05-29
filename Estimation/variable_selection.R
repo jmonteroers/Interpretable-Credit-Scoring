@@ -72,17 +72,20 @@ sel_vars_bic_both <- get_selected_variables(bic_fit_both)
 train_bic <- train[, c("TARGET", sel_vars_bic_both)]
 write.csv(train_bic, file=gzfile("train_apps_bic.csv.gz"), row.names = F)
 
-# Add VIC selection´
-# BIC - No issues
+# VIC selection
+
+# to check number of rows of resulting scorecard
+get_nrows_scorecard <- function(df) {
+  nunique_per_col <- apply(train_bic, 2, function(c) length(unique(c)))
+  # substract number of target values
+  sum(nunique_per_col) - length(unique(df$TARGET))
+}
+
+# BIC
 train_bic <- read.csv(gzfile("train_apps_bic.csv.gz"))
 bic_model <- glm(TARGET ~ ., data = train_bic, family = binomial)
+# No VIF issues
 vif_bic <- vif(bic_model)
-
-get_rows_scorecard <- function(df) {
-  nunique_per_col <- apply(train_bic, 2, function(c) length(unique(c)))
-  # substract 2 for target
-  sum(nunique_per_col) - 2
-}
 
 # Remove positive coefficients, return dataset without columns that produce
 # positive coefficients in regression
@@ -113,3 +116,8 @@ cleaned_train_bic <- remove_pos_coeffs(train_bic)
 write.csv(
   cleaned_train_bic$data, file=gzfile("train_apps_bic_npos.csv.gz"), row.names = F
   )
+print(paste(
+  "Number of rows in resulting scorecard",
+  get_nrows_scorecard(cleaned_train_bic)
+  )
+)
