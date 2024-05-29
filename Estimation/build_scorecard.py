@@ -1,7 +1,7 @@
 import pandas as pd
 from math import log
 from sklearn.linear_model import LogisticRegression
-
+import re
 TARGET = "TARGET"
 
 pd.options.mode.copy_on_write = True
@@ -86,6 +86,24 @@ def check_scorecard(bt_with_points):
     print(f"Points have been successfully added to {n_attrs_points} attributes.")
 
 
+def clean_bins(str_l, max_len=1):
+        """max_len does not include the extra ... added"""
+        if not ("[" in str_l and "]" in str_l):
+            return str_l
+        # Parse string to list
+        str_l = str_l.strip("[]")
+        if r"'" in str_l:
+            pattern = r"'(.*?)'"
+        # assume numbers
+        else:
+            pattern = r"(\d+)"
+        l = re.findall(pattern, str_l)
+        # Correct if too long
+        if len(l) >= max_len:
+            l = l[:max_len] + ["..."]
+        return ", ".join(l)
+
+
 def clean_scorecard(bt_with_points):
     """Remove 'Special' bin and rows without points, cleans and select columns in output order"""
     clean_sc = bt_with_points.loc[
@@ -95,10 +113,14 @@ def clean_scorecard(bt_with_points):
     clean_sc.loc[:, "Attribute"] = clean_sc["Attribute"].str.capitalize()
     clean_sc.loc[:, "Bad Rate (%)"] = 100*clean_sc["Event rate"]
     clean_sc.loc[:, "Count (%)"] = 100*clean_sc["Count (%)"]
+    # Convert bins from list to string
+    clean_sc.loc[:, "Bin"] = clean_sc["Bin"].apply(clean_bins)
+
     # Select columns
     clean_sc = clean_sc[[
-        "Attribute", "Bin", "Count (%)", "Bad Rate (%)", "Coefficient", "WoE", "Points", "Weight (%)"
+        "Attribute", "WoE", "Weight (%)", "Bin", "Count (%)", "Bad Rate (%)", "Coefficient", "Points"
     ]]
+    clean_sc.columns = [c.replace(r"%", r"\%") for c in clean_sc.columns]
     return clean_sc
 
 
@@ -109,7 +131,7 @@ def export_to_latex(sccard, outpath, attributes=None):
     # Export to latex
     sccard.style.\
        format(escape="latex").\
-       format(subset=["Count (%)", "Bad Rate (%)", "Coefficient", "WoE", "Points", "Weight (%)"], precision=2).\
+       format(subset=[r"Count (\%)", r"Bad Rate (\%)", "Coefficient", "WoE", "Points", r"Weight (\%)"], precision=2).\
        hide(axis="index").\
        to_latex(outpath, hrules=True)
 
@@ -118,8 +140,8 @@ if __name__ == "__main__":
     from pathlib import Path
 
     PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
-    train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_bic.csv.gz', compression="gzip")
-    bt = pd.read_excel(PARENT_DIR / "meta" / "woe_mapping.xlsx")
+    train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_bic_npos.csv.gz', compression="gzip")
+    bt = pd.read_excel(PARENT_DIR / "meta" / "woe_map" / "woe_mapping.xlsx")
 
     scorecard = build_scorecard(train, bt)
     check_scorecard(scorecard)
@@ -128,6 +150,6 @@ if __name__ == "__main__":
 
     # Export scorecard as Excel
     scorecard.to_excel(PARENT_DIR / 'meta' / 'scorecard_bic.xlsx', index=False)
-    export_to_latex(scorecard, PARENT_DIR / 'meta' / 'scorecard_latex.tex', ["Ext_source_3", "Name_education_type"])
+    export_to_latex(scorecard, PARENT_DIR / 'meta' / 'scorecard_latex.tex', None)
     breakpoint()
 
