@@ -2,7 +2,8 @@ import pandas as pd
 from math import log
 from sklearn.linear_model import LogisticRegression
 import re
-from utils.utils import TARGET
+
+from utils import TARGET, attrs
 
 pd.options.mode.copy_on_write = True
 
@@ -110,7 +111,7 @@ def clean_scorecard(bt_with_points):
         (bt_with_points["Bin"] != "Special") & ~bt_with_points["Points"].isna()
     ]
     # Edit values for clarity
-    clean_sc.loc[:, "Attribute"] = clean_sc["Attribute"].str.capitalize()
+    clean_sc = attrs.prettify_attrs(clean_sc, "Attribute")
     clean_sc.loc[:, "Bad Rate (%)"] = 100*clean_sc["Event rate"]
     clean_sc.loc[:, "Count (%)"] = 100*clean_sc["Count (%)"]
     # Convert bins from list to string
@@ -137,7 +138,6 @@ def export_to_latex(sccard, outpath, attributes=None):
        format(escape="latex").\
        format(subset=[r"Count (\%)", r"Bad Rate (\%)", "WoE", "Points"], precision=2).\
        format_index({
-           0: lambda s: s.replace("_", " "),
            1: lambda f: "{:.2f}".format(f),
            2: lambda f: "{:.2f}".format(f),
            },
@@ -146,7 +146,7 @@ def export_to_latex(sccard, outpath, attributes=None):
        to_latex(
            outpath, 
            hrules=True,
-           column_format="|p{3cm}|p{1.5cm}|p{1.5cm}|p{3cm}|p{2cm}|p{2cm}|p{1.5cm}|p{1.5cm}|",
+           column_format="|p{4cm}|p{1.5cm}|p{1.5cm}|p{3cm}|p{2cm}|p{2cm}|p{1.25cm}|p{1.25cm}|",
            multirow_align="t",
            environment="longtable"
            )

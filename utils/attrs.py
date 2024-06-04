@@ -1,7 +1,5 @@
 import pandas as pd
-
 from utils import PARENT_DIR
-
 
 def prettify_attrs(df: pd.DataFrame, attr_col, new_attr_col=None):
     """Function that maps the original attribute names to clean, understandable attribute names. By default, the function replaces the column original attribute names"""
