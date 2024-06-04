@@ -1,5 +1,5 @@
 import pandas as pd
-from add_features.utils import PARENT_DIR
+from utils.utils import PARENT_DIR
 
 from pdb import set_trace
 

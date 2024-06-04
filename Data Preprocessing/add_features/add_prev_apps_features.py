@@ -1,5 +1,5 @@
 import pandas as pd
-from .utils import PARENT_DIR, CURRENT_ID, PREV_ID, add_count, add_age_credit, add_exposure
+from utils.utils import PARENT_DIR, CURRENT_ID, PREV_ID, add_count, add_age_credit, add_exposure
 
 import gc
 

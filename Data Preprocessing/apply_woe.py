@@ -10,7 +10,7 @@ import time
 import logging
 from datetime import datetime
 
-from add_features.utils import PARENT_DIR
+from utils.utils import PARENT_DIR
 
 logger = logging.getLogger("WOE_logger")
 logging.basicConfig(level=logging.INFO)

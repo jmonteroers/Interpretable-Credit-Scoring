@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from .utils import PARENT_DIR, CURRENT_ID, PREV_ID, SAMPLE_ID_CURR, add_count
+from utils.utils import PARENT_DIR, CURRENT_ID, PREV_ID, SAMPLE_ID_CURR, add_count
 
 import gc
 

@@ -6,7 +6,7 @@ and then filters out any variable with IV lower than 0.02 (indicating it to be g
 import pandas as pd
 import logging
 
-from add_features.utils import PARENT_DIR
+from utils.utils import PARENT_DIR
 
 logger = logging.getLogger("WOE_logger")
 logging.basicConfig(level=logging.INFO)
