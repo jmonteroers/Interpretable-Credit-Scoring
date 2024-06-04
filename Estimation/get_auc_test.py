@@ -1,10 +1,8 @@
 import pandas as pd
 import statsmodels.api as sm
 from sklearn.metrics import roc_auc_score
-from pathlib import Path
 
-PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
-TARGET = "TARGET"
+from utils.utils import PARENT_DIR, TARGET
 
 # Load Data
 train_aic = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_aic.csv.gz', compression="gzip")

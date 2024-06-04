@@ -2,7 +2,7 @@ import pandas as pd
 from math import log
 from sklearn.linear_model import LogisticRegression
 import re
-TARGET = "TARGET"
+from utils.utils import TARGET
 
 pd.options.mode.copy_on_write = True
 
@@ -118,7 +118,7 @@ def clean_scorecard(bt_with_points):
 
     # Select columns
     clean_sc = clean_sc[[
-        "Attribute", "WoE", "Weight (%)", "Bin", "Count (%)", "Bad Rate (%)", "Coefficient", "Points"
+        "Attribute", "Coefficient" , "Weight (%)", "Bin", "Count (%)", "Bad Rate (%)", "WoE", "Points"
     ]]
     clean_sc.columns = [c.replace(r"%", r"\%") for c in clean_sc.columns]
     return clean_sc
@@ -128,18 +128,33 @@ def export_to_latex(sccard, outpath, attributes=None):
     # filter attributes, if provided
     if attributes is not None:
         sccard = sccard.loc[sccard.Attribute.isin(attributes), :]
+    # extra level added to get multirow for all three levels of the index
+    sccard["Index Extra"] = ""
+    sccard.set_index(["Attribute", "Coefficient" , r"Weight (\%)", "Index Extra"], inplace=True)
+
     # Export to latex
     sccard.style.\
        format(escape="latex").\
-       format(subset=[r"Count (\%)", r"Bad Rate (\%)", "Coefficient", "WoE", "Points", r"Weight (\%)"], precision=2).\
-       hide(axis="index").\
-       to_latex(outpath, hrules=True)
+       format(subset=[r"Count (\%)", r"Bad Rate (\%)", "WoE", "Points"], precision=2).\
+       format_index({
+           0: lambda s: s.replace("_", " "),
+           1: lambda f: "{:.2f}".format(f),
+           2: lambda f: "{:.2f}".format(f),
+           },
+           escape="latex").\
+       hide(level=3).\
+       to_latex(
+           outpath, 
+           hrules=True,
+           column_format="|p{3cm}|p{1.5cm}|p{1.5cm}|p{3cm}|p{2cm}|p{2cm}|p{1.5cm}|p{1.5cm}|",
+           multirow_align="t",
+           environment="longtable"
+           )
 
 
 if __name__ == "__main__":
-    from pathlib import Path
+    from utils.utils import PARENT_DIR
 
-    PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
     train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_bic_npos.csv.gz', compression="gzip")
     bt = pd.read_excel(PARENT_DIR / "meta" / "woe_map" / "woe_mapping.xlsx")
 
