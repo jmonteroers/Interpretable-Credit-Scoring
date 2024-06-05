@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from math import log
 from sklearn.linear_model import LogisticRegression
 import re
@@ -106,10 +107,13 @@ def clean_bins(str_l, max_len=1):
 
 
 def clean_scorecard(bt_with_points):
-    """Remove 'Special' bin and rows without points, cleans and select columns in output order"""
+    """Remove special, total and missing with no values. Cleans and select columns in output order"""
     clean_sc = bt_with_points.loc[
-        (bt_with_points["Bin"] != "Special") & ~bt_with_points["Points"].isna()
+        (bt_with_points["Bin"] != "Special") 
+        & ~bt_with_points["Points"].isna()
+        & (np.abs(bt_with_points["Count (%)"]) > 1e-8)
     ]
+
     # Edit values for clarity
     clean_sc = attrs.prettify_attrs(clean_sc, "Attribute")
     clean_sc.loc[:, "Bad Rate (%)"] = 100*clean_sc["Event rate"]
