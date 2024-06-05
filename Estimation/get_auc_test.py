@@ -3,16 +3,23 @@ import statsmodels.api as sm
 from sklearn.metrics import roc_auc_score
 
 from utils.utils import PARENT_DIR, TARGET
+from utils.attrs import prettify_cols
 
 # Load Data
 train_aic = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_aic.csv.gz', compression="gzip")
 train_bic = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_bic.csv.gz', compression="gzip")
 test = pd.read_csv(PARENT_DIR / 'processed' / 'test_apps_woe.csv.zip', compression="zip")
 
+# Prettify columns (except TARGET)
+train_aic = prettify_cols(train_aic, exceptions=[TARGET])
+train_bic = prettify_cols(train_bic, exceptions=[TARGET])
+test = prettify_cols(test, exceptions=[TARGET])
+
 # Replace targets
 train_aic[TARGET] = train_aic[TARGET] == 0.
 train_bic[TARGET] = train_bic[TARGET] == 0.
 test[TARGET] = test[TARGET] == 0.
+
 
 def fit_logit(train):
     # Add constants
@@ -35,10 +42,33 @@ def get_roc_auc(logit_fit, test):
     return roc_auc_score(test.TARGET.values == 0., y_score.values)
 
 
-def summary_to_latex(logit_fit, outpath):
-    summary = logit_fit.summary2().as_latex()
+def summary_to_latex(logit_fit, outpath, caption, label):
+    # Add summary of result
+    res = logit_fit.summary().tables[0].as_latex_tabular()
+    # Decrease table counter
+    res += (
+    r"""
+    % Decrease due to composite table
+    \addtocounter{table}{-1}
+    """
+    )
+    # Add result detail
+    detail_res = logit_fit.summary().tables[1].as_latex_tabular()
+    detail_res = detail_res.replace("tabular", "longtable")
+    res += detail_res
+
+    # Add caption
+    res += (
+    r"""
+    \begin{{center}}
+        \captionsetup{{type=table}}
+        \caption{{{caption}}}
+        \label{{{label}}}
+    \end{{center}}
+    """.format(caption=caption, label=label)
+    )
     with open(outpath, 'w') as fd:
-        fd.write(summary)
+        fd.write(res)
 
 # AIC - Train/Test ROC AUC
 fit_aic = fit_logit(train_aic)
@@ -60,9 +90,8 @@ df_roc_auc = pd.DataFrame(roc_auc, index=['AIC', 'BIC'])
 # Convert the DataFrame to LaTeX
 latex_output = df_roc_auc.to_latex()
 print(latex_output)
-breakpoint()
 
 # Save estimated Models as LaTeX files
 outfolder = PARENT_DIR / 'meta'
-summary_to_latex(fit_aic, outfolder / 'summary_logit_aic.tex')
-summary_to_latex(fit_bic, outfolder / 'summary_logit_bic.tex')
+summary_to_latex(fit_aic, outfolder / 'summary_logit_aic.tex', "This love has taken its toll on me", "tab:love")
+summary_to_latex(fit_bic, outfolder / 'summary_logit_bic.tex', "Love to hate her, hate to love her", "tab:love-hate")
