@@ -25,11 +25,15 @@ def build_scorecard(df, binning_table, estimator=None, pdo=20., peo=600.):
     estimator = LogisticRegression() if estimator is None else estimator
     estimator.fit(X, y)
 
-    # Step 2: Build coefficients dataframe
+    # Step 2: Build coefficients + weights dataframe
     coefficients = estimator.coef_[0]
     n_vars = len(coefficients)
     intercept = estimator.intercept_[0]
-    coefficients_df = pd.DataFrame({'Attribute': X.columns, 'Coefficient': coefficients})
+    coefficients_df = pd.DataFrame({
+        'Attribute': X.columns, 
+        'Coefficient': coefficients,
+        'Weight (%)': get_weights(X, coefficients)
+        })
 
     # Step 3: Add coefficients to binning table
     bt_ext = binning_table.copy()
@@ -48,25 +52,11 @@ def build_scorecard(df, binning_table, estimator=None, pdo=20., peo=600.):
     return bt_ext
 
 
-def add_weights(bt_ext):
-    # Step 1: summarise by attribute, find average points per attribute
-    weighted_avg = bt_ext.groupby('Attribute').apply(
-        lambda x: (x['Points'] * x['Count (%)']).sum() / x['Count (%)'].sum()
-        )
-    weighted_avg.rename("Average Points", inplace=True)
-    weighted_avg = weighted_avg.reset_index()
-
-    # Step 2: Normalise the average points per attribute, getting weights (%)
-    weighted_avg["Weight (%)"] = 100*(
-        weighted_avg["Average Points"] 
-        / weighted_avg["Average Points"].sum()
-    )
-
-    # Step 3: Merge back with scorecard
-    bt_weights = bt_ext.copy()
-    bt_weights = pd.merge(bt_weights, weighted_avg, how="left", on="Attribute")
-    
-    return bt_weights
+def get_weights(X, coeffs):
+    std_X = np.std(X, axis=0)
+    wt_X = std_X * coeffs
+    # Normalise (%)
+    return 100 * wt_X / wt_X.sum()
 
 
 def check_scorecard(bt_with_points):
@@ -114,6 +104,9 @@ def clean_scorecard(bt_with_points):
         & (np.abs(bt_with_points["Count (%)"]) > 1e-8)
     ]
 
+     # Sort by Weight(%), Points
+    clean_sc.sort_values(["Weight (%)", "Points"], ascending=[False, True], inplace=True)
+
     # Edit values for clarity
     clean_sc = attrs.prettify_attrs(clean_sc, "Attribute")
     clean_sc.loc[:, "Bad Rate (%)"] = 100*clean_sc["Event rate"]
@@ -126,6 +119,7 @@ def clean_scorecard(bt_with_points):
         "Attribute", "Coefficient" , "Weight (%)", "Bin", "Count (%)", "Bad Rate (%)", "WoE", "Points"
     ]]
     clean_sc.columns = [c.replace(r"%", r"\%") for c in clean_sc.columns]
+
     return clean_sc
 
 
@@ -164,7 +158,6 @@ if __name__ == "__main__":
 
     scorecard = build_scorecard(train, bt)
     check_scorecard(scorecard)
-    scorecard = add_weights(scorecard)
     scorecard = clean_scorecard(scorecard)
 
     # Export scorecard as Excel
