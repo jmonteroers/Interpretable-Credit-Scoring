@@ -7,6 +7,8 @@ from itertools import product
 import matplotlib.pyplot as plt
 
 from utils import TARGET, attrs
+from utils.pd import concat_train_test
+from utils.stats import ecdf
 
 pd.options.mode.copy_on_write = True
 
@@ -164,19 +166,13 @@ def score_woe_applications(X, scorecard, intercept, pdo=20., peo=600.):
     return pdo/log(2) * (X.values @ coeffs + intercept) + peo
 
 
-def hist_comparison(train_sc, test_sc):
+def dens_plot_comparison(train_sc, test_sc):
     """
-    Create histogram plot by default/non-default, train/test dataset. 
+    Create density plot by default/non-default, train/test dataset. 
     `train_sc`and `test_sc` must contain Score attribute.
     """
-    # Concatenate train and test datasets
-    # find intersection of columns
-    common_cols = train_sc.columns.intersection(test_sc.columns).tolist()
-    train_sc = train_sc[common_cols]
-    test_sc = test_sc[common_cols]
-    train_sc["Dataset"] = "Train"
-    test_sc["Dataset"] = "Test"
-    df_scores = pd.concat([train_sc, test_sc], axis=0)
+    # Concatenate train and test datasets, using intersection of columns
+    df_scores = concat_train_test(train_sc, test_sc)
 
     # Iterate over Default x Train/Test, creating a histogram for each
     df_scores["Default"] = df_scores[TARGET].map({0: "Non-default", 1: "Default"})
@@ -196,6 +192,29 @@ def hist_comparison(train_sc, test_sc):
     ax.set_xlabel("Score")
     plt.show()
 
+
+def ecdf_plot_comparison(train_sc, test_sc):
+    # Set up figure
+    plt.figure(figsize=(8, 6))
+    plt.xlabel('Score')
+    plt.ylabel('ECDF')
+    plt.title('Empirical Cumulative Distribution Function (ECDF)')
+
+    # Concatenate train and test datasets, using intersection of columns
+    df_scores = concat_train_test(train_sc, test_sc)
+
+    df_scores["Default"] = df_scores[TARGET].map({0: "Non-default", 1: "Default"})
+    options = product(["Train", "Test"], ["Default", "Non-default"])
+    for option in options:
+        df_sel = df_scores.loc[
+            (df_scores.Dataset == option[0]) & (df_scores.Default == option[1])
+            ]
+        label_sel = f"{option[0]}, {option[1]}"
+        x, y = ecdf(df_sel["Score"])
+        plt.plot(x, y, label=label_sel)
+    plt.legend()
+
+    plt.show()
 
 if __name__ == "__main__":
     from utils.utils import PARENT_DIR
@@ -220,7 +239,9 @@ if __name__ == "__main__":
     test = pd.read_csv(PARENT_DIR / "processed" / "test_apps_woe.csv.zip", compression="zip")
     test["Score"] = score_woe_applications(test, raw_scorecard, intercept)
 
-    hist_comparison(train, test)
+    ecdf_plot_comparison(train, test)
+    breakpoint()
 
+    dens_plot_comparison(train, test)
     breakpoint()
 
