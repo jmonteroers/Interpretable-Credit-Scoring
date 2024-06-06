@@ -3,6 +3,8 @@ import numpy as np
 from math import log
 from sklearn.linear_model import LogisticRegression
 import re
+from itertools import product
+import matplotlib.pyplot as plt
 
 from utils import TARGET, attrs
 
@@ -49,7 +51,7 @@ def build_scorecard(df, binning_table, estimator=None, pdo=20., peo=600.):
         ) / n_vars
     )
 
-    return bt_ext
+    return bt_ext, intercept
 
 
 def get_weights(X, coeffs):
@@ -97,7 +99,7 @@ def clean_bins(str_l, max_len=1):
 
 
 def clean_scorecard(bt_with_points):
-    """Remove special, total and missing with no values. Cleans and select columns in output order"""
+    """Remove special, bins with zero count. Cleans and select columns in output order"""
     clean_sc = bt_with_points.loc[
         (bt_with_points["Bin"] != "Special") 
         & ~bt_with_points["Points"].isna()
@@ -150,18 +152,75 @@ def export_to_latex(sccard, outpath, attributes=None):
            )
 
 
+def score_woe_applications(X, scorecard, intercept, pdo=20., peo=600.):
+    # Summarise scorecard by coefficients
+    scorecard = scorecard.loc[~scorecard["Points"].isna()]  # remove non-scored attributes
+    coeffs = scorecard.groupby("Attribute")[["Coefficient"]].mean().reset_index()
+    # Reorder X to have the Attributes in the scorecard
+    X = X[coeffs.Attribute.values.tolist()]
+    # Get vector of coefficients
+    coeffs = coeffs.Coefficient.values.reshape(-1, 1)
+    # Obtain score
+    return pdo/log(2) * (X.values @ coeffs + intercept) + peo
+
+
+def hist_comparison(train_sc, test_sc):
+    """
+    Create histogram plot by default/non-default, train/test dataset. 
+    `train_sc`and `test_sc` must contain Score attribute.
+    """
+    # Concatenate train and test datasets
+    # find intersection of columns
+    common_cols = train_sc.columns.intersection(test_sc.columns).tolist()
+    train_sc = train_sc[common_cols]
+    test_sc = test_sc[common_cols]
+    train_sc["Dataset"] = "Train"
+    test_sc["Dataset"] = "Test"
+    df_scores = pd.concat([train_sc, test_sc], axis=0)
+
+    # Iterate over Default x Train/Test, creating a histogram for each
+    df_scores["Default"] = df_scores[TARGET].map({0: "Non-default", 1: "Default"})
+    options = product(["Train", "Test"], ["Default", "Non-default"])
+    ax = None
+    for option in options:
+        df_sel = df_scores.loc[
+            (df_scores.Dataset == option[0]) & (df_scores.Default == option[1])
+            ]
+        label_sel = f"{option[0]}, {option[1]}"
+        ax = df_sel["Score"].plot.density(
+            bw_method=0.5,
+            label=label_sel,
+            ax = ax
+            )
+    ax.legend()
+    ax.set_xlabel("Score")
+    plt.show()
+
+
 if __name__ == "__main__":
     from utils.utils import PARENT_DIR
 
     train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_bic_npos.csv.gz', compression="gzip")
     bt = pd.read_excel(PARENT_DIR / "meta" / "woe_map" / "woe_mapping.xlsx")
 
-    scorecard = build_scorecard(train, bt)
+    scorecard, _ = build_scorecard(train, bt)
     check_scorecard(scorecard)
     scorecard = clean_scorecard(scorecard)
 
     # Export scorecard as Excel
     scorecard.to_excel(PARENT_DIR / 'meta' / 'scorecard_bic.xlsx', index=False)
     export_to_latex(scorecard, PARENT_DIR / 'meta' / 'scorecard_latex.tex', None)
+
+    # Score train applications
+    # Must use raw scorecard so that attributes in scorecard and scored datasets match
+    raw_scorecard, intercept = build_scorecard(train, bt)
+    train["Score"] = score_woe_applications(train, raw_scorecard, intercept)
+
+    # Score test applications
+    test = pd.read_csv(PARENT_DIR / "processed" / "test_apps_woe.csv.zip", compression="zip")
+    test["Score"] = score_woe_applications(test, raw_scorecard, intercept)
+
+    hist_comparison(train, test)
+
     breakpoint()
 
