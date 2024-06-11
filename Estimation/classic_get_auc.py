@@ -16,9 +16,9 @@ train_bic = prettify_cols(train_bic, exceptions=[TARGET])
 test = prettify_cols(test, exceptions=[TARGET])
 
 # Replace targets
-train_aic[TARGET] = train_aic[TARGET] == 0.
-train_bic[TARGET] = train_bic[TARGET] == 0.
-test[TARGET] = test[TARGET] == 0.
+train_aic[TARGET] = train_aic[TARGET]
+train_bic[TARGET] = train_bic[TARGET]
+test[TARGET] = test[TARGET]
 
 
 def fit_logit(train):
@@ -39,7 +39,7 @@ def get_roc_auc(logit_fit, test):
     X_test = sm.add_constant(X_test)
     # Make predictions, obtain ROC AUC
     y_score = logit_fit.predict(X_test)
-    return roc_auc_score(test.TARGET.values == 0., y_score.values)
+    return roc_auc_score(test.TARGET.values, y_score.values)
 
 
 def summary_to_latex(logit_fit, outpath, caption, label):
@@ -87,11 +87,16 @@ roc_auc = {
 }
 # Create the DataFrame with rows as 'AIC' and 'BIC'
 df_roc_auc = pd.DataFrame(roc_auc, index=['AIC', 'BIC'])
+df_roc_auc = df_roc_auc.map(lambda x: f"{x * 100:.2f}%")
 # Convert the DataFrame to LaTeX
 latex_output = df_roc_auc.to_latex()
 print(latex_output)
 
 # Save estimated Models as LaTeX files
 outfolder = PARENT_DIR / 'meta'
-summary_to_latex(fit_aic, outfolder / 'summary_logit_aic.tex', "This love has taken its toll on me", "tab:love")
-summary_to_latex(fit_bic, outfolder / 'summary_logit_bic.tex', "Love to hate her, hate to love her", "tab:love-hate")
+summary_to_latex(
+    fit_aic, outfolder / 'summary_logit_aic.tex', 
+    "Logistic Regression Estimates after Variable Selection using AIC.", "tab:logit_aic")
+summary_to_latex(
+    fit_bic, outfolder / 'summary_logit_bic.tex', 
+    "ogistic Regression Estimates after Variable Selection using BIC.", "tab:logit_bic")
