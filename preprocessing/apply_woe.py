@@ -115,10 +115,20 @@ test  = pd.read_csv(PARENT_DIR / "processed" / "test_apps_imp.csv.gz", compressi
 # Metadata
 meta = pd.read_csv(PARENT_DIR / "meta" / "train_summary_applications_ext.csv")
 
+# Check that all attributes in train have been classified
+non_classified = []
+meta_attrs = meta.Attribute.unique().tolist()
+for col in train.columns:
+    if col in [TARGET, "SK_ID_CURR"]:
+        continue
+    if col not in meta_attrs:
+        non_classified.append(col)
+print(f"Non-classified attributes: {non_classified}")
+
 # Get categorical columns
 cat_columns = meta.loc[meta["Data Type"].isin(["Categorical", "Binary"]), "Attribute"].unique().tolist()
 num_columns = meta.loc[meta["Data Type"].isin(["Quantitative"]), "Attribute"].unique().tolist()
- 
+
 # Exceptions to default minimum prebins - otherwise, have a single prebin
 exc_min_prebin_size = {
     'N_BUREAU_CURR_BAD_30': 0.005,
