@@ -42,6 +42,10 @@ def get_roc_auc(logit_fit, test):
     return roc_auc_score(test.TARGET.values, y_score.values)
 
 
+def get_gini(logit_fit, test):
+    return 2.*get_roc_auc(logit_fit, test) - 1.
+
+
 def summary_to_latex(logit_fit, outpath, caption, label):
     # Add summary of result
     res = logit_fit.summary().tables[0].as_latex_tabular()
@@ -72,24 +76,24 @@ def summary_to_latex(logit_fit, outpath, caption, label):
 
 # AIC - Train/Test ROC AUC
 fit_aic = fit_logit(train_aic)
-train_roc_auc_aic = get_roc_auc(fit_aic, train_aic)
-test_roc_auc_aic = get_roc_auc(fit_aic, test)
+train_gini_aic = get_gini(fit_aic, train_aic)
+test_gini_aic = get_gini(fit_aic, test)
 
 # BIC - Train/Test ROC AUC
 fit_bic = fit_logit(train_bic)
-train_roc_auc_bic = get_roc_auc(fit_bic, train_bic)
-test_roc_auc_bic = get_roc_auc(fit_bic, test)
+train_gini_bic = get_gini(fit_bic, train_bic)
+test_gini_bic = get_gini(fit_bic, test)
 
 # Output results to LaTeX
-roc_auc = {
-    'Train': [train_roc_auc_aic, train_roc_auc_bic],
-    'Test': [test_roc_auc_aic, test_roc_auc_bic]
+gini = {
+    'Train': [train_gini_aic, train_gini_bic],
+    'Test': [test_gini_aic, test_gini_bic]
 }
 # Create the DataFrame with rows as 'AIC' and 'BIC'
-df_roc_auc = pd.DataFrame(roc_auc, index=['AIC', 'BIC'])
-df_roc_auc = df_roc_auc.map(lambda x: f"{x * 100:.2f}%")
+df_gini = pd.DataFrame(gini, index=['AIC', 'BIC'])
+df_gini = df_gini.map(lambda x: f"{x * 100:.2f}%")
 # Convert the DataFrame to LaTeX
-latex_output = df_roc_auc.to_latex()
+latex_output = df_gini.to_latex()
 print(latex_output)
 
 # Save estimated Models as LaTeX files
@@ -99,4 +103,4 @@ summary_to_latex(
     "Logistic Regression Estimates after Variable Selection using AIC.", "tab:logit_aic")
 summary_to_latex(
     fit_bic, outfolder / 'summary_logit_bic.tex', 
-    "ogistic Regression Estimates after Variable Selection using BIC.", "tab:logit_bic")
+    "Logistic Regression Estimates after Variable Selection using BIC.", "tab:logit_bic")
