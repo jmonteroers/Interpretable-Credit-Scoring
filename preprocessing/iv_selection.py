@@ -7,6 +7,7 @@ import pandas as pd
 import logging
 
 from utils.utils import PARENT_DIR, TARGET
+from utils.attrs import prettify_attrs
 
 logger = logging.getLogger("WOE_logger")
 logging.basicConfig(level=logging.INFO)
@@ -22,16 +23,31 @@ iv = woe_totals.loc[:, ["Attribute", "IV"]]
 iv.sort_values("IV", ascending=False, inplace=True)
 
 # Follow Siddiqi (2017), apply IV filter for IV less than 0.02 (generally unpredictive)
-iv_sel = iv.loc[iv.IV >= 0.02]
+iv_sel = iv.loc[iv.IV >= 0.02].copy()
 logger.info(f"After IV filtering, {len(iv_sel)} features have been selected")
 
 # Export to LaTeX table
 outpath_table = PARENT_DIR / "meta" / "iv_table.tex"
-iv_sel.style.\
+
+# Create table by Strength
+def iv_to_strength(iv):
+    if iv < 0.02:
+        return "Generally Unpredictive"
+    elif iv < 0.1:
+        return "Weak"
+    elif iv < 0.3:
+        return "Medium"
+    return "Strong"
+
+iv_sel["Strength"] = iv_sel["IV"].apply(iv_to_strength)
+# Map attributes to clean attributes
+iv_sel = prettify_attrs(iv_sel, 'Attribute')
+iv_by_strength = iv_sel.groupby('Strength')['Attribute'].agg(', '.join).reset_index()
+iv_by_strength.style.\
        format(escape="latex").\
-       format(subset="IV", precision=2).\
        hide(axis="index").\
        to_latex(outpath_table, hrules=True)
+breakpoint()
 
 # Apply filtering
 # load dataset
