@@ -25,7 +25,7 @@ def build_scorecard(df, binning_table, estimator=None, pdo=20., peo=600.):
     # Step 1: Fit logistic model
     X = df.drop(TARGET, axis=1)
     # 1s are good loans
-    y = pd.to_numeric(df.TARGET == 0)
+    y = pd.to_numeric(df.TARGET)
     estimator = LogisticRegression() if estimator is None else estimator
     estimator.fit(X, y)
 
@@ -46,10 +46,11 @@ def build_scorecard(df, binning_table, estimator=None, pdo=20., peo=600.):
         )
 
     # Step 4: Compute points
+    factor = -pdo/log(2)
     bt_ext["Points"] = (
-        bt_ext["Coefficient"]*bt_ext["WoE"]*pdo/log(2)
+        -bt_ext["Coefficient"]*bt_ext["WoE"]*factor
         + (
-            intercept*pdo/log(2) + peo
+            intercept*factor + peo
         ) / n_vars
     )
 
@@ -148,7 +149,7 @@ def export_to_latex(sccard, outpath, attributes=None):
        to_latex(
            outpath, 
            hrules=True,
-           column_format="|p{4cm}|p{1.5cm}|p{1.5cm}|p{3cm}|p{2cm}|p{2cm}|p{1.25cm}|p{1.25cm}|",
+           column_format="|p{4cm}|p{1.5cm}|p{1.5cm}|p{3cm}|p{1.5cm}|p{1.5cm}|p{1.25cm}|p{1.25cm}|",
            multirow_align="t",
            environment="longtable"
            )
@@ -163,7 +164,8 @@ def score_woe_applications(X, scorecard, intercept, pdo=20., peo=600.):
     # Get vector of coefficients
     coeffs = coeffs.Coefficient.values.reshape(-1, 1)
     # Obtain score
-    return pdo/log(2) * (X.values @ coeffs + intercept) + peo
+    factor = -pdo/log(2)
+    return factor * (X.values @ coeffs + intercept) + peo
 
 
 def dens_plot_comparison(train_sc, test_sc):
@@ -230,6 +232,7 @@ if __name__ == "__main__":
     scorecard.to_excel(PARENT_DIR / 'meta' / 'scorecard_bic.xlsx', index=False)
     export_to_latex(scorecard, PARENT_DIR / 'meta' / 'scorecard_latex.tex', None)
 
+    breakpoint()
     # Score train applications
     # Must use raw scorecard so that attributes in scorecard and scored datasets match
     raw_scorecard, intercept = build_scorecard(train, bt)
