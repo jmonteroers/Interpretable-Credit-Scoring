@@ -136,21 +136,25 @@ if __name__ == "__main__":
 
     #### Gradient Boosting ####
     if FIT_BOOST:
-        from sklearn.ensemble import GradientBoostingClassifier
+        from xgboost import XGBClassifier
+
+        # Monotone Constraints
+        gb_constraints = None
+        if MONOTONICITY:
+            gb_constraints = {feat: -1 for feat in X_train.columns}
+        
         gb_param_grid = {
         'max_depth': [1, 3, 5],
-        'n_estimators': [100, 1000],
-        'learning_rate': [0.1, 0.3, 0.5],
-        'min_samples_leaf': [0.0025, 0.005]
+        'n_estimators': [75, 100, 250],
+        'learning_rate': [0.1, 0.3, 0.5]
         }
         # Simple grid (testing)
-        # gb_param_grid = {
-        # 'max_depth': [1],
-        # 'n_estimators': [100],
-        # 'learning_rate': [0.1],
-        # 'min_samples_leaf': [0.0025]
-        # }
-        gb_est = GradientBoostingClassifier(monotonic_cst=monotonic_cst, random_state=RANDOM_SEED)
+        gb_param_grid = {
+        'max_depth': [1],
+        'n_estimators': [100],
+        'learning_rate': [0.1]
+        }
+        gb_est = XGBClassifier(tree_method="hist", monotone_constraints=gb_constraints, random_state=RANDOM_SEED)
         gb_fit, gb_train_gini, gb_test_gini = get_gini_sklearn(
             gb_est, X_train, y_train, X_test, y_test, gb_param_grid, cv=3, verbose=4
             )
@@ -158,9 +162,11 @@ if __name__ == "__main__":
         gini_res["GB"] = (gb_train_gini, gb_test_gini)
         breakpoint()
         ## Explainable - set max_depth to 1, n_estimators to 100
-        gb_est_exp = GradientBoostingClassifier(
-            monotonic_cst=monotonic_cst, 
-            max_depth=1, n_estimators=100, learning_rate=0.5, min_samples_leaf=0.005, random_state=RANDOM_SEED
+        gb_est_exp = XGBClassifier(
+            tree_method="hist",
+            monotone_constraints=gb_constraints, 
+            max_depth=1, n_estimators=100, learning_rate=0.5, 
+            random_state=RANDOM_SEED
             )
         gb_est_exp.fit(X_train, y_train)
         gb_exp_train_gini, gb_exp_test_gini = gini_train_test(
