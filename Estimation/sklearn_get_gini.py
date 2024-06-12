@@ -56,6 +56,7 @@ if __name__ == "__main__":
     FIT_DT = False
     FIT_RF = False
     FIT_BOOST = True
+    MONOTONICITY = True
 
     # Store gini metrics
     gini_res = {}
@@ -69,8 +70,9 @@ if __name__ == "__main__":
     X_test = test.drop(columns=[TARGET, "SK_ID_CURR"])
     y_test = test[TARGET]
 
-    # Define monotonic constraints
-    monotonic_cst = [-1]*X_train.shape[1]
+    # Define monotonic constraints - If 0, no constraints
+    monotonic_val = -1 if MONOTONICITY else 0
+    monotonic_cst = [monotonic_val]*X_train.shape[1]
 
     #### Decision Tree ####
     if FIT_DT:
