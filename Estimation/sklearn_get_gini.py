@@ -69,6 +69,9 @@ if __name__ == "__main__":
     X_test = test.drop(columns=[TARGET, "SK_ID_CURR"])
     y_test = test[TARGET]
 
+    # Define monotonic constraints
+    monotonic_cst = [-1]*X_train.shape[1]
+
     #### Decision Tree ####
     if FIT_DT:
         from sklearn.tree import DecisionTreeClassifier
@@ -76,14 +79,17 @@ if __name__ == "__main__":
         'max_depth': [5, 10, 15, 25],
         'min_samples_leaf': [0.0025, 0.005, 0.01]
         }
-        dt_est = DecisionTreeClassifier(random_state=RANDOM_SEED)
+        dt_est = DecisionTreeClassifier(monotonic_cst=monotonic_cst, random_state=RANDOM_SEED)
         dt_fit, dt_train_gini, dt_test_gini = get_gini_sklearn(dt_est, X_train, y_train, X_test, y_test, dt_param_grid, cv=5, verbose=4
             )
         print(f"Decision Tree. train_gini: {dt_train_gini}; test_gini: {dt_test_gini}")
         gini_res["DT"] = (dt_train_gini, dt_test_gini)
 
         ## Explainable - reduce max depth
-        dt_est_exp = DecisionTreeClassifier(max_depth=5, min_samples_leaf=0.005, random_state=RANDOM_SEED)
+        dt_est_exp = DecisionTreeClassifier(
+            monotonic_cst=monotonic_cst, 
+            max_depth=5, min_samples_leaf=0.005, random_state=RANDOM_SEED
+            )
         dt_est_exp.fit(X_train, y_train)
         dt_exp_train_gini, dt_exp_test_gini = gini_train_test(dt_est_exp, X_train, y_train, X_test, y_test)
         print(f"Explainable Decision Tree. train_gini: {dt_exp_train_gini}; test_gini: {dt_exp_test_gini}")
@@ -105,7 +111,7 @@ if __name__ == "__main__":
         #     "max_depth": [1],
         #     "min_samples_leaf": [0.005]
         # }
-        rf_est = RandomForestClassifier(random_state=RANDOM_SEED)
+        rf_est = RandomForestClassifier(monotonic_cst=monotonic_cst, random_state=RANDOM_SEED)
         rf_fit, rf_train_gini, rf_test_gini = get_gini_sklearn(
             rf_est, X_train, y_train, X_test, y_test, rf_param_grid, cv=3, verbose=4
             )
@@ -113,7 +119,9 @@ if __name__ == "__main__":
         gini_res["RF"] = (rf_train_gini, rf_test_gini)
         breakpoint()
         ## Explainable - set max_depth to 1, n_estimators to 100
-        rf_est_exp = ExplainableRandomForest(max_depth=1, n_estimators=100, min_samples_leaf=0.005, random_state=RANDOM_SEED)
+        rf_est_exp = ExplainableRandomForest(
+            monotonic_cst=monotonic_cst, 
+            max_depth=1, n_estimators=100, min_samples_leaf=0.005, random_state=RANDOM_SEED)
         rf_est_exp.fit(X_train, y_train)
         rf_exp_train_gini, rf_exp_test_gini = gini_train_test(
             rf_est_exp, X_train, y_train, X_test, y_test, pred_proba=rf_est_exp.predict_proba_using_logit
@@ -140,7 +148,7 @@ if __name__ == "__main__":
         # 'learning_rate': [0.1],
         # 'min_samples_leaf': [0.0025]
         # }
-        gb_est = GradientBoostingClassifier(random_state=RANDOM_SEED)
+        gb_est = GradientBoostingClassifier(monotonic_cst=monotonic_cst, random_state=RANDOM_SEED)
         gb_fit, gb_train_gini, gb_test_gini = get_gini_sklearn(
             gb_est, X_train, y_train, X_test, y_test, gb_param_grid, cv=3, verbose=4
             )
@@ -149,6 +157,7 @@ if __name__ == "__main__":
         breakpoint()
         ## Explainable - set max_depth to 1, n_estimators to 100
         gb_est_exp = GradientBoostingClassifier(
+            monotonic_cst=monotonic_cst, 
             max_depth=1, n_estimators=100, learning_rate=0.5, min_samples_leaf=0.005, random_state=RANDOM_SEED
             )
         gb_est_exp.fit(X_train, y_train)
