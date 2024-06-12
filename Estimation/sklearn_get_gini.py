@@ -57,6 +57,9 @@ if __name__ == "__main__":
     FIT_RF = False
     FIT_BOOST = True
 
+    # Store gini metrics
+    gini_res = {}
+
     # Load data, split into X, y
     train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_woe.csv.zip', compression="zip")
     test = pd.read_csv(PARENT_DIR / 'processed' / 'test_apps_woe.csv.zip', compression="zip")
@@ -77,12 +80,14 @@ if __name__ == "__main__":
         dt_fit, dt_train_gini, dt_test_gini = get_gini_sklearn(dt_est, X_train, y_train, X_test, y_test, dt_param_grid, cv=5, verbose=4
             )
         print(f"Decision Tree. train_gini: {dt_train_gini}; test_gini: {dt_test_gini}")
+        gini_res["DT"] = (dt_train_gini, dt_test_gini)
 
         ## Explainable - reduce max depth
         dt_est_exp = DecisionTreeClassifier(max_depth=5, min_samples_leaf=0.005, random_state=RANDOM_SEED)
         dt_est_exp.fit(X_train, y_train)
         dt_exp_train_gini, dt_exp_test_gini = gini_train_test(dt_est_exp, X_train, y_train, X_test, y_test)
         print(f"Explainable Decision Tree. train_gini: {dt_exp_train_gini}; test_gini: {dt_exp_test_gini}")
+        gini_res["Exp_DT"] = (dt_exp_train_gini, dt_exp_test_gini)
 
         breakpoint()
 
@@ -94,7 +99,7 @@ if __name__ == "__main__":
         'max_depth': [1, 5, 10],
         'min_samples_leaf': [0.0025, 0.005, 0.01]
         }
-        # Simple grid
+        # Simple grid (testing)
         # rf_param_grid = {
         #     "n_estimators": [100],
         #     "max_depth": [1],
@@ -105,6 +110,7 @@ if __name__ == "__main__":
             rf_est, X_train, y_train, X_test, y_test, rf_param_grid, cv=3, verbose=4
             )
         print(f"Random Forest. train_gini: {rf_train_gini}; test_gini: {rf_test_gini}")
+        gini_res["RF"] = (rf_train_gini, rf_test_gini)
         breakpoint()
         ## Explainable - set max_depth to 1, n_estimators to 100
         rf_est_exp = ExplainableRandomForest(max_depth=1, n_estimators=100, min_samples_leaf=0.005, random_state=RANDOM_SEED)
@@ -113,6 +119,7 @@ if __name__ == "__main__":
             rf_est_exp, X_train, y_train, X_test, y_test, pred_proba=rf_est_exp.predict_proba_using_logit
             )
         print(f"Explainable Random Forest. train_gini: {rf_exp_train_gini}; test_gini: {rf_exp_test_gini}")
+        gini_res["Exp_RF"] = (rf_exp_train_gini, rf_exp_test_gini)
 
         breakpoint()
 
@@ -127,17 +134,18 @@ if __name__ == "__main__":
         'min_samples_leaf': [0.0025, 0.005]
         }
         # Simple grid (testing)
-        gb_param_grid = {
-        'max_depth': [1],
-        'n_estimators': [100],
-        'learning_rate': [0.1],
-        'min_samples_leaf': [0.0025]
-        }
+        # gb_param_grid = {
+        # 'max_depth': [1],
+        # 'n_estimators': [100],
+        # 'learning_rate': [0.1],
+        # 'min_samples_leaf': [0.0025]
+        # }
         gb_est = GradientBoostingClassifier(random_state=RANDOM_SEED)
         gb_fit, gb_train_gini, gb_test_gini = get_gini_sklearn(
             gb_est, X_train, y_train, X_test, y_test, gb_param_grid, cv=3, verbose=4
             )
         print(f"Gradient Boosting. train_gini: {gb_train_gini}; test_gini: {gb_test_gini}")
+        gini_res["GB"] = (gb_train_gini, gb_test_gini)
         breakpoint()
         ## Explainable - set max_depth to 1, n_estimators to 100
         gb_est_exp = GradientBoostingClassifier(
@@ -148,8 +156,9 @@ if __name__ == "__main__":
             gb_est_exp, X_train, y_train, X_test, y_test
             )
         print(f"Explainable Gradient Boosting. train_gini: {gb_exp_train_gini}; test_gini: {gb_exp_test_gini}")
+        gini_res["Exp_GB"] = (gb_exp_train_gini, gb_exp_test_gini)
 
         breakpoint()
-from django.conf import settings
+
 
 
