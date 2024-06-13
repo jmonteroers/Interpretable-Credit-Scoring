@@ -48,7 +48,7 @@ def build_scorecard(df, binning_table, estimator=None, pdo=20., peo=600.):
     # Step 4: Compute points
     factor = -pdo/log(2)
     bt_ext["Points"] = (
-        -bt_ext["Coefficient"]*bt_ext["WoE"]*factor
+        bt_ext["Coefficient"]*bt_ext["WoE"]*factor
         + (
             intercept*factor + peo
         ) / n_vars
