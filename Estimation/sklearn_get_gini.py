@@ -1,7 +1,7 @@
 from sklearn.metrics import roc_auc_score
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
-from scipy.special import expit, log1p
+from scipy.special import logit, expit
 import numpy as np
 import pandas as pd
 from collections import defaultdict
@@ -18,11 +18,11 @@ class ExplainableRandomForest(RandomForestClassifier):
         # avoid storing the output of every estimator by summing them here
         logit_estimates = np.zeros((X.shape[0], self.n_classes_), dtype=np.float64) 
         for tree in estimators:
-            logit_estimates += expit(tree.predict_proba(X))
+            logit_estimates += logit(tree.predict_proba(X))
         # Average logit estimates
         logit_estimates = logit_estimates/n_est
         # Transform back to probability if required
-        estimates = log1p(logit_estimates) if return_prob else logit_estimates
+        estimates = expit(logit_estimates) if return_prob else logit_estimates
         return estimates
     
     def compute_trees_by_feature(self, reload=False):
@@ -41,7 +41,7 @@ class ExplainableRandomForest(RandomForestClassifier):
         trees_feat = self.trees_by_feature.get(feature)
         if trees_feat is None:
             return pd.NA
-        return self.predict_using_logit(X, estimators=trees_feat)
+        return self.predict_using_logit(X, estimators=trees_feat, return_prob=False)[:, 1]
     
     def get_feature_score(self, feature, X, pdo=20., peo=600.):
         K = X.shape[1]

@@ -14,16 +14,22 @@ def build_scorecard_rf(fit_exp_rf: ExplainableRandomForest, binning_table, pdo, 
         & ~scorecard["Bin"].isna()
         & (np.abs(scorecard["Count (%)"]) > 1e-8)
     ]
+    # add lead weights columns, filled with zeros by default
+    scorecard["LeafWeight"] = 0.
     # Compute weights by attribute
     for attribute in scorecard.Attribute.unique():
+        print(f"Calculating points for attribute {attribute}...")
         X_attr = scorecard.loc[scorecard.Attribute == attribute]
         n_attr = X_attr.shape[0]
-        # Note: assuming this modifies the scorecard itself
+
         # create artificial observations, 0s everywhere except for attribute
         attr_obs = pd.DataFrame(np.zeros((n_attr, n_feats)), columns=feats)
-        attr_obs[attribute] = X_attr.WoE
-        breakpoint()
-        X_attr["LeafWeight"] = fit_exp_rf.get_feature_score(attribute, attr_obs, pdo, peo)
+        attr_obs[attribute] = X_attr.WoE.values
+
+        # edit leaf weights for attribute
+        scorecard.loc[
+            scorecard.Attribute == attribute, 
+            "LeafWeight"] = fit_exp_rf.get_feature_score(attribute, attr_obs, pdo, peo)
     return scorecard
 
 
