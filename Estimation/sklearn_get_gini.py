@@ -3,22 +3,50 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import RandomForestClassifier
 from scipy.special import expit, log1p
 import numpy as np
+import pandas as pd
+from collections import defaultdict
 
 
 class ExplainableRandomForest(RandomForestClassifier):
     """Inherit from Random Forest Classifier, modify predict_proba method to be based on average logit prediction"""
-    def predict_proba_using_logit(self, X):
+    def predict_using_logit(self, X, return_prob=True, estimators=None):
         # Check data
         X = self._validate_X_predict(X)
-        n_est = len(self.estimators_)
+        if estimators is None:
+            estimators = self.estimators_
+        n_est = len(estimators)
         # avoid storing the output of every estimator by summing them here
         logit_estimates = np.zeros((X.shape[0], self.n_classes_), dtype=np.float64) 
-        for tree in self.estimators_:
+        for tree in estimators:
             logit_estimates += expit(tree.predict_proba(X))
         # Average logit estimates
         logit_estimates = logit_estimates/n_est
-        # Transform back to probability
-        return log1p(logit_estimates)
+        # Transform back to probability if required
+        estimates = log1p(logit_estimates) if return_prob else logit_estimates
+        return estimates
+    
+    def compute_trees_by_feature(self, reload=False):
+        if not reload and hasattr(self, "trees_by_feature"):
+            return
+        self.trees_by_feature = defaultdict(lambda: [])
+        # Here assuming decision stumps have been fitted
+        for tree in self.estimators_:
+            idx_feat = tree.tree_.feature[0]
+            feat = self.feature_names_in_[idx_feat]
+            self.trees_by_feature[feat].append(tree)
+    
+    def get_feature_logit(self, feature, X):
+        if not hasattr(self, "trees_by_feature"):
+            self.compute_trees_by_feature()
+        trees_feat = self.trees_by_feature.get(feature)
+        if trees_feat is None:
+            return pd.NA
+        return self.predict_using_logit(X, estimators=trees_feat)
+    
+    def get_feature_score(self, feature, X, pdo=20., peo=600.):
+        K = X.shape[1]
+        factor = -pdo/np.log(2)
+        return factor*self.get_feature_logit(feature, X) + peo/K
 
 
 def gini_train_test(fit, X_train, y_train, X_test, y_test, pred_proba=None):
@@ -47,15 +75,14 @@ def get_gini_sklearn(estimator, X_train, y_train, X_test, y_test, param_grid, cv
 
 
 if __name__ == "__main__":
-    import pandas as pd
     from utils import PARENT_DIR, TARGET
 
     RANDOM_SEED = 1234
 
     # Which models to get Gini for
-    FIT_DT = False
+    FIT_DT = True
     FIT_RF = False
-    FIT_BOOST = True
+    FIT_BOOST = False
     MONOTONICITY = True
 
     # Store gini metrics
@@ -78,7 +105,7 @@ if __name__ == "__main__":
     if FIT_DT:
         from sklearn.tree import DecisionTreeClassifier
         dt_param_grid = {
-        'max_depth': [5, 10, 15, 25],
+        'max_depth': [3, 10, 15],
         'min_samples_leaf': [0.0025, 0.005, 0.01]
         }
         dt_est = DecisionTreeClassifier(monotonic_cst=monotonic_cst, random_state=RANDOM_SEED)
@@ -126,7 +153,7 @@ if __name__ == "__main__":
             max_depth=1, n_estimators=100, min_samples_leaf=0.005, random_state=RANDOM_SEED)
         rf_est_exp.fit(X_train, y_train)
         rf_exp_train_gini, rf_exp_test_gini = gini_train_test(
-            rf_est_exp, X_train, y_train, X_test, y_test, pred_proba=rf_est_exp.predict_proba_using_logit
+            rf_est_exp, X_train, y_train, X_test, y_test, pred_proba=rf_est_exp.predict_using_logit
             )
         print(f"Explainable Random Forest. train_gini: {rf_exp_train_gini}; test_gini: {rf_exp_test_gini}")
         gini_res["Exp_RF"] = (rf_exp_train_gini, rf_exp_test_gini)
