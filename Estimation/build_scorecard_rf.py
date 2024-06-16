@@ -4,6 +4,9 @@ from sklearn_get_gini import ExplainableRandomForest
 import re
 from typing import Tuple
 
+from Estimation.build_scorecard import clean_bins
+from utils.attrs import prettify_attrs
+
 
 def build_scorecard_rf(fit_exp_rf: ExplainableRandomForest, binning_table, pdo, peo):
     # Retrieve features from fitted model
@@ -84,9 +87,55 @@ def combine_intervals(scorecard):
     merged_scorecard = scorecard.groupby(
         ["Attribute", "LeafWeight"], sort=False
         ).apply(combine_intv_group).reset_index()
+    # Rename LeafWeight as Points
+    merged_scorecard.rename(columns={"LeafWeight": "Points"}, inplace=True)
     # TODO: Add WoE
-    # TODO: Adjustments to meet classical style
     return merged_scorecard
+
+
+def clean_scorecard_rf(sc):
+    """Sorts, cleans and select columns in output order"""
+    clean_sc = sc.copy()
+    # Sort by Attribute, Points
+    clean_sc.sort_values(["Attribute", "Points"], ascending=[False, True], inplace=True)
+
+    # Edit values for clarity
+    clean_sc = prettify_attrs(clean_sc, "Attribute")
+    clean_sc.loc[:, "Bad Rate (%)"] = 100*clean_sc["Event rate"]
+    clean_sc.loc[:, "Count (%)"] = 100*clean_sc["Count (%)"]
+    # Convert bins from list to string
+    clean_sc.loc[:, "Bin"] = clean_sc["Bin"].apply(clean_bins)
+
+    # Select columns
+    clean_sc = clean_sc[[
+        "Attribute", "Bin", "Count (%)", "Bad Rate (%)", "Points"
+    ]]
+    clean_sc.columns = [c.replace(r"%", r"\%") for c in clean_sc.columns]
+
+    return clean_sc
+
+
+def export_to_latex_rf(sccard, outpath, attributes=None):
+    # filter attributes, if provided
+    if attributes is not None:
+        sccard = sccard.loc[sccard.Attribute.isin(attributes), :]
+    # extra level added to get multirow for the index
+    sccard["Index Extra"] = ""
+    sccard.set_index(["Attribute", "Index Extra"], inplace=True)
+
+    # Export to latex
+    sccard.style.\
+       format(escape="latex").\
+       format(subset=[r"Count (\%)", r"Bad Rate (\%)", "Points"], precision=2).\
+       format_index(escape="latex").\
+       hide(level=1).\
+       to_latex(
+           outpath, 
+           hrules=True,
+           column_format="|p{4cm}|p{5cm}|p{2cm}|p{2cm}|p{2cm}|",
+           multirow_align="t",
+           environment="longtable"
+           )
 
 
 if __name__ == "__main__":
@@ -111,4 +160,8 @@ if __name__ == "__main__":
     bt = pd.read_excel(PARENT_DIR / "meta" / "woe_map" / "woe_mapping.xlsx")
     scorecard = build_scorecard_rf(rf_est_exp, bt, 20., 600.)
     merged_scorecard = combine_intervals(scorecard)
+
+    # Clean and export scorecard
+    clean_sc = clean_scorecard_rf(merged_scorecard)
+    export_to_latex_rf(clean_sc, PARENT_DIR / 'meta' / 'rf_scorecard_latex.tex', None)
     breakpoint()
