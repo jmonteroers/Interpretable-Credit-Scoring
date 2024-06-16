@@ -8,7 +8,7 @@ from Estimation.build_scorecard import clean_bins
 from utils.attrs import prettify_attrs
 
 
-def build_scorecard_rf(fit_exp_rf: ExplainableRandomForest, binning_table, pdo, peo):
+def build_scorecard_rf(X, fit_exp_rf: ExplainableRandomForest, binning_table, pdo, peo):
     # Retrieve features from fitted model
     feats = fit_exp_rf.feature_names_in_
     n_feats = len(feats)
@@ -19,12 +19,13 @@ def build_scorecard_rf(fit_exp_rf: ExplainableRandomForest, binning_table, pdo, 
         & ~scorecard["Bin"].isna()
         & (np.abs(scorecard["Count (%)"]) > 1e-8)
     ]
+    scorecard.set_index("Attribute", inplace=True)
     # add lead weights columns, filled with zeros by default
-    scorecard["LeafWeight"] = 0.
+    scorecard["Points"] = 0.
     # Compute weights by attribute
-    for attribute in scorecard.Attribute.unique():
+    for attribute in scorecard.index.unique():
         print(f"Calculating points for attribute {attribute}...")
-        X_attr = scorecard.loc[scorecard.Attribute == attribute]
+        X_attr = scorecard.loc[attribute]
         n_attr = X_attr.shape[0]
 
         # create artificial observations, 0s everywhere except for attribute
@@ -32,10 +33,14 @@ def build_scorecard_rf(fit_exp_rf: ExplainableRandomForest, binning_table, pdo, 
         attr_obs[attribute] = X_attr.WoE.values
 
         # edit leaf weights for attribute
-        scorecard.loc[
-            scorecard.Attribute == attribute, 
-            "LeafWeight"] = fit_exp_rf.get_feature_score(attribute, attr_obs, pdo, peo)
-    return scorecard
+        scorecard.loc[attribute, "Points"] = fit_exp_rf.get_feature_score(
+            attribute, attr_obs, pdo, peo
+            )
+    
+    # Add Weights - using attribute index to match
+    scorecard["Weight (%)"] = fit_exp_rf.get_weight_features(X)
+    # TODO: Add WoE
+    return scorecard.reset_index()
 
 
 def extract_elems_num_interval(interval: str) -> Tuple[str, str]:
@@ -85,19 +90,16 @@ def combine_intervals(scorecard):
             "Type": group.Type.iloc[0]
         })
     merged_scorecard = scorecard.groupby(
-        ["Attribute", "LeafWeight"], sort=False
+        ["Attribute", "Weight (%)", "Points"], sort=False
         ).apply(combine_intv_group).reset_index()
-    # Rename LeafWeight as Points
-    merged_scorecard.rename(columns={"LeafWeight": "Points"}, inplace=True)
-    # TODO: Add WoE
     return merged_scorecard
 
 
 def clean_scorecard_rf(sc):
     """Sorts, cleans and select columns in output order"""
     clean_sc = sc.copy()
-    # Sort by Attribute, Points
-    clean_sc.sort_values(["Attribute", "Points"], ascending=[False, True], inplace=True)
+    # Sort by Weight, Points
+    clean_sc.sort_values(["Weight (%)", "Points"], ascending=[False, True], inplace=True)
 
     # Edit values for clarity
     clean_sc = prettify_attrs(clean_sc, "Attribute")
@@ -108,7 +110,7 @@ def clean_scorecard_rf(sc):
 
     # Select columns
     clean_sc = clean_sc[[
-        "Attribute", "Bin", "Count (%)", "Bad Rate (%)", "Points"
+        "Attribute", "Weight (%)", "Bin", "Count (%)", "Bad Rate (%)", "Points"
     ]]
     clean_sc.columns = [c.replace(r"%", r"\%") for c in clean_sc.columns]
 
@@ -121,18 +123,20 @@ def export_to_latex_rf(sccard, outpath, attributes=None):
         sccard = sccard.loc[sccard.Attribute.isin(attributes), :]
     # extra level added to get multirow for the index
     sccard["Index Extra"] = ""
-    sccard.set_index(["Attribute", "Index Extra"], inplace=True)
+    sccard.set_index(["Attribute", r"Weight (\%)", "Index Extra"], inplace=True)
 
     # Export to latex
     sccard.style.\
        format(escape="latex").\
        format(subset=[r"Count (\%)", r"Bad Rate (\%)", "Points"], precision=2).\
-       format_index(escape="latex").\
-       hide(level=1).\
+       format_index(
+           {1: lambda f: "{:.2f}".format(f)},
+           escape="latex").\
+       hide(level=2).\
        to_latex(
            outpath, 
            hrules=True,
-           column_format="|p{4cm}|p{5cm}|p{2cm}|p{2cm}|p{2cm}|",
+           column_format="|p{4cm}|p{1.5cm}|p{5cm}|p{2cm}|p{2cm}|p{2cm}|",
            multirow_align="t",
            environment="longtable"
            )
@@ -158,7 +162,7 @@ if __name__ == "__main__":
 
     # Build scorecard
     bt = pd.read_excel(PARENT_DIR / "meta" / "woe_map" / "woe_mapping.xlsx")
-    scorecard = build_scorecard_rf(rf_est_exp, bt, 20., 600.)
+    scorecard = build_scorecard_rf(X_train, rf_est_exp, bt, 20., 600.)
     merged_scorecard = combine_intervals(scorecard)
 
     # Clean and export scorecard

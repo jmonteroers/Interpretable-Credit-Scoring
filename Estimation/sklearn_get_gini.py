@@ -47,6 +47,20 @@ class ExplainableRandomForest(RandomForestClassifier):
         K = X.shape[1]
         factor = -pdo/np.log(2)
         return factor*self.get_feature_logit(feature, X) + peo/K
+    
+    def get_weight_features(self, X):
+        """Compute % share of sum of sd of logit scores for each feature as weights. 
+        Note that the result does not depend on pdo and peo by the properties of the standard deviation"""
+        if not hasattr(self, "trees_by_feature"):
+            self.compute_trees_by_feature()
+        sd_preds = pd.Series()
+        for feature in self.trees_by_feature.keys():
+            feat_scores = self.get_feature_score(feature, X)
+            sd_preds[feature] = np.std(feat_scores)
+        # Normalise weights and return
+        return 100. * sd_preds / sd_preds.sum()
+
+
 
 
 def gini_train_test(fit, X_train, y_train, X_test, y_test, pred_proba=None):
