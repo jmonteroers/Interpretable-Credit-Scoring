@@ -1,6 +1,6 @@
 import pandas as pd
 
-from .utils import PARENT_DIR
+from utils.utils import PARENT_DIR
 
 from .add_bureau_features import add_bureau_features
 from .add_prev_apps_features import add_prev_apps_features

@@ -9,10 +9,7 @@ from io import BytesIO
 import pandas as pd
 import matplotlib.pyplot as plt
 import statsmodels.api as sm
-from pdb import set_trace
-
-
-TARGET = "TARGET"
+from utils.utils import TARGET
 
 
 def add_section_missing(doc, df, feat_name):
@@ -133,8 +130,8 @@ def export_missing_pvals(df, outpath):
 
 
 if __name__ == "__main__":
-    from pathlib import Path
-    PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
+    from utils.utils import PARENT_DIR
+
     df = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_ext.csv.zip')
     # create_report_missing(df, PARENT_DIR / "meta" / "bivariate_report_missing.docx")
     export_missing_pvals(df, PARENT_DIR / "meta" / "bivariate_missing_pvals.tex")

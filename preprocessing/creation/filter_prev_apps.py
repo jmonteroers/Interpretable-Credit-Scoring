@@ -5,7 +5,7 @@ and only keeps the applications whose contract status equal
 """
 
 import pandas as pd
-from utils import PARENT_DIR
+from utils.utils import PARENT_DIR
 
 prev_apps = pd.read_csv(PARENT_DIR / "previous_application.csv.zip", compression="zip")
 prev_apps = prev_apps.loc[prev_apps.NAME_CONTRACT_STATUS == "Approved", ]

@@ -6,7 +6,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
 
-from add_features.utils import PARENT_DIR, CURRENT_ID
+from utils.utils import PARENT_DIR, CURRENT_ID
 from add_features.main import add_features
 
 from pdb import set_trace
