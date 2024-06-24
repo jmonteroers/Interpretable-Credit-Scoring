@@ -97,6 +97,7 @@ if __name__ == "__main__":
     FIT_DT = False
     FIT_RF = False
     FIT_BOOST = False
+    FIT_NN = True
     MONOTONICITY = True
 
     # Store gini metrics
@@ -218,6 +219,21 @@ if __name__ == "__main__":
 
         breakpoint()
     
+    if FIT_NN:
+        from sklearn.neural_network import MLPClassifier
+        nn_param_grid = {
+        'learning_rate': ['invscaling', 'adaptive'],
+        'learning_rate_init': [0.01, 0.001, 0.0001]
+        }
+        nn_est = MLPClassifier(max_iter=100, early_stopping=True, random_state=RANDOM_SEED)
+        nn_fit, nn_train_gini, nn_test_gini = get_gini_sklearn(
+            nn_est, X_train, y_train, X_test, y_test, nn_param_grid, cv=5, verbose=4
+            )
+        print(f"Neural Network. train_gini: {nn_train_gini}; test_gini: {nn_test_gini}")
+        gini_res["NN"] = (nn_train_gini, nn_test_gini)
+        breakpoint()
+
+    
     ## Compare standard prediction against new prediction method, Random Forest
     from utils.plot import scatterplot_compare_series
     rf_est_exp = ExplainableRandomForest(
@@ -232,5 +248,7 @@ if __name__ == "__main__":
         std_probs, new_probs, 
         x_label="Scikit-learn Probabilities", y_label="Probabilities using logit", 
         s=20)
+    
+
 
 
