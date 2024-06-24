@@ -1,9 +1,9 @@
 import pandas as pd
 import numpy as np
-from sklearn_get_gini import ExplainableRandomForest
 import re
 from typing import Tuple
 
+from sklearn_get_gini import ExplainableRandomForest
 from Estimation.build_scorecard import clean_bins
 from utils.attrs import prettify_attrs
 
@@ -118,6 +118,7 @@ def clean_scorecard_rf(sc):
 
 
 def export_to_latex_rf(sccard, outpath, attributes=None):
+    sccard = sccard.copy()
     # filter attributes, if provided
     if attributes is not None:
         sccard = sccard.loc[sccard.Attribute.isin(attributes), :]
@@ -167,5 +168,6 @@ if __name__ == "__main__":
 
     # Clean and export scorecard
     clean_sc = clean_scorecard_rf(merged_scorecard)
+    clean_sc.to_excel(PARENT_DIR / 'meta' / 'rf_scorecard.xlsx', index=False)
     export_to_latex_rf(clean_sc, PARENT_DIR / 'meta' / 'rf_scorecard_latex.tex', None)
     breakpoint()

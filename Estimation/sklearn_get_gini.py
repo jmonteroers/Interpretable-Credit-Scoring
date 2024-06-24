@@ -94,7 +94,7 @@ if __name__ == "__main__":
     RANDOM_SEED = 1234
 
     # Which models to get Gini for
-    FIT_DT = True
+    FIT_DT = False
     FIT_RF = False
     FIT_BOOST = False
     MONOTONICITY = True
@@ -217,6 +217,20 @@ if __name__ == "__main__":
         gini_res["Exp_GB"] = (gb_exp_train_gini, gb_exp_test_gini)
 
         breakpoint()
+    
+    ## Compare standard prediction against new prediction method, Random Forest
+    from utils.plot import scatterplot_compare_series
+    rf_est_exp = ExplainableRandomForest(
+            monotonic_cst=monotonic_cst, 
+            max_depth=1, n_estimators=100, min_samples_leaf=0.005, random_state=RANDOM_SEED)
+    rf_est_exp.fit(X_train, y_train)
 
+    std_probs = rf_est_exp.predict_proba(X_train)[:, 1]
+    new_probs = rf_est_exp.predict_using_logit(X_train)[:, 1]
+    breakpoint()
+    scatterplot_compare_series(
+        std_probs, new_probs, 
+        x_label="Scikit-learn Probabilities", y_label="Probabilities using logit", 
+        s=20)
 
 
