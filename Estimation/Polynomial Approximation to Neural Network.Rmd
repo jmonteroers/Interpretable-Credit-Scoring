@@ -1,0 +1,261 @@
+---
+title: "NN - Approximate Polynomials"
+author: "Juan Montero de Espinosa"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/jmont/Documents/courses/msc-data-science/master-thesis/credit-scoring/TFM/Data/Home Credit/processed")
+```
+
+```{r}
+library(nn2poly)
+library(keras)
+library(tictoc)
+library(pROC)
+# This sets all needed seeds
+tensorflow::set_random_seed(42)
+
+# helper functions
+print_list <- function(x) {
+  writeLines(paste0(x, collapse = ","))
+}
+
+get_gini <- function(true, pred) {
+  2.*auc(roc(true, pred)) - 1.
+}
+
+print_gini_train_test <- function(
+    prob_model, train_x, test_x, train_y, test_y) {
+  pred_train_nn <- predict(prob_model, train_x)[, 2]
+  pred_test_nn <- predict(prob_model, test_x)[, 2]
+  print("Train Gini")
+  print(get_gini(as.numeric(train_y), pred_train_nn))
+  print("Test Gini")
+  print(get_gini(as.numeric(test_y), pred_test_nn))
+}
+```
+
+## Data Preparation
+
+Load the train and test datasets.
+
+```{r}
+train <- read.csv(unz("train_apps_woe.csv.zip", "train_apps_woe.csv"))
+train_x <- as.matrix(subset(train, select=-c(TARGET, SK_ID_CURR)))
+train_y <- as.matrix(train$TARGET)
+```
+
+```{r}
+test <- read.csv(unz("test_apps_woe.csv.zip", "test_apps_woe.csv"))
+test_x <- as.matrix(subset(test, select=-c(TARGET, SK_ID_CURR)))
+test_y <- as.matrix(test$TARGET)
+```
+
+
+## Build NN
+
+We first declare the model:
+```{r}
+p <- dim(train_x)[2]
+# Binary problem
+n_class <- 2
+
+keras_model <- function(p) {
+  tensorflow::set_random_seed(42)
+
+  nn <- keras::keras_model_sequential()
+  nn <- keras::layer_dense(nn, units = 100, activation="tanh", input_shape = p)
+  nn <- keras::layer_dense(nn, units = n_class, activation = "linear")
+
+  nn
+}
+
+nn <- keras_model(p)
+# Impose weight constraints provided by nn2poly package
+nn <- add_constraints(nn, constraint_type = "l1_norm")
+nn
+```
+
+Now we compile and train it. I have added early-stopping and adaptive learning callbacks to obtain better results:
+
+```{r}
+compile(nn,
+        loss = loss_sparse_categorical_crossentropy(from_logits = TRUE),
+        optimizer = optimizer_adam(lr=0.001),
+        metrics = "accuracy")
+tic()
+history <- fit(nn,
+               train_x,
+               train_y,
+               verbose = 0,
+               epochs = 100,
+               validation_split = 0.3,
+               callbacks=list(
+                 callback_early_stopping(patience=10, restore_best_weights = T),
+                 callback_reduce_lr_on_plateau(factor=0.5, patience=2L)
+                 )
+)
+
+plot(history)
+toc()
+```
+
+## Build a Polynomial Representation
+
+I build the polynomial representation using `nn2poly` and check that all predictors are being included.
+
+```{r}
+# Polynomial for nn
+final_poly <- nn2poly(object = nn,
+                      max_order = 1)
+# All predictors are included
+print_list(final_poly$labels)
+```
+
+Check if representation has positive coefficients?
+```{r}
+coeffs_rep <- final_poly$values[2:nrow(final_poly$values), 2]
+table(coeffs_rep > 0)/length(coeffs_rep)
+```
+The method has about a `r round(100*sum(coeffs_rep > 0)/length(coeffs_rep), 2)`% of positive coefficients.
+
+## Dropping positive coefficients
+
+We can repeat the fitting process dropping the predictors with positive coefficients - here, we do not do one predictor at a time, for computational reasons.
+
+```{r}
+lean_train_x <- train_x[, coeffs_rep > 0]
+p_lean <- ncol(lean_train_x)
+
+nn_lean <- keras_model(p_lean)
+# Impose weight constraints provided by nnpoly package
+nn_lean <- add_constraints(nn_lean, constraint_type = "l1_norm")
+compile(nn_lean,
+        loss = loss_sparse_categorical_crossentropy(from_logits = TRUE),
+        optimizer = optimizer_adam(),
+        metrics = "accuracy")
+tic()
+history <- fit(nn_lean,
+               lean_train_x,
+               train_y,
+               verbose = 0,
+               epochs = 100,
+               validation_split = 0.3,
+               callbacks=list(
+                 callback_early_stopping(patience=10, restore_best_weights = T),
+                 callback_reduce_lr_on_plateau(factor=0.5, patience=2L)
+                 )
+)
+
+plot(history)
+toc()
+# Polynomial representation
+lean_final_poly <- nn2poly(object = nn_lean, max_order = 1)
+```
+Again, we check that all predictors are being included and the number of positive coefficients.
+
+```{r}
+# All predictors are included
+print_list(lean_final_poly$labels)
+# remove intercept, focus on default
+lean_coeffs_rep <- lean_final_poly$values[2:nrow(lean_final_poly$values), 2]
+table(lean_coeffs_rep > 0)
+```
+There are still positive coefficients.
+
+## Obtain Gini
+
+### Neural Network
+
+For the original version:
+
+```{r}
+# probability estimates
+probability_model <- keras_model_sequential() %>%
+  nn() %>%
+  layer_activation_softmax()
+
+print_gini_train_test(probability_model, train_x, test_x, train_y, test_y)
+```
+
+For the lean version:
+
+```{r}
+# probability estimates
+prob_model_lean <- keras_model_sequential() %>%
+  nn_lean() %>%
+  layer_activation_softmax()
+
+print_gini_train_test(
+  prob_model_lean, 
+  train_x[, coeffs_rep > 0], test_x[, coeffs_rep > 0], 
+  train_y, test_y)
+```
+
+### Polynomial Representation
+
+Full version:
+
+```{r}
+# Obtain the predicted values for the test data with our Polynomial Regression
+train_pred_poly_matrix <- predict(object = final_poly, newdata = train_x)
+test_pred_poly_matrix <- predict(object = final_poly, newdata = test_x)
+
+# Define probability model with keras for the polynomial outputs
+probability_poly <- keras_model_sequential() %>%
+  layer_activation_softmax()
+
+print_gini_train_test(
+  probability_poly, train_pred_poly_matrix, 
+  test_pred_poly_matrix, train_y, test_y)
+```
+
+Lean version:
+
+```{r}
+# Obtain the predicted values for the test data with our Polynomial Regression
+train_pred_poly_matrix_lean <- predict(
+  object = lean_final_poly, 
+  newdata = train_x[, coeffs_rep > 0]
+  )
+test_pred_poly_matrix_lean <- predict(
+  object = lean_final_poly, 
+  newdata = test_x[, coeffs_rep > 0]
+  )
+
+# Define probability model with keras for the polynomial outputs
+probability_poly <- keras_model_sequential() %>%
+  layer_activation_softmax()
+
+print_gini_train_test(
+  probability_poly, train_pred_poly_matrix_lean, 
+  test_pred_poly_matrix_lean, train_y, test_y)
+```
+
+
+## Visual Comparison
+
+
+The representation achieves extremely similar predictions as the original network:
+
+```{r}
+logit_pred_nn <- keras_model_sequential() %>% nn()
+prediction_nn <- predict(logit_pred_nn, test_x)[, 2]
+nn2poly:::plot_diagonal(x_axis = prediction_nn,
+              y_axis =  test_pred_poly_matrix[, 2],
+              xlab = "NN prediction",
+              ylab = "Polynomial prediction")
+```
+And given the Gini results above, it seems to perform even better at preserving the ranking in the logit scale.
+
+
+To check the Taylor expansion for each polynomial fitted (Commented out as it takes too long)
+```{r}
+# nn2poly:::plot_taylor_and_activation_potentials(object = nn,
+#                                                 data = train,
+#                                                 max_order = 1,
+#                                                 constraints = TRUE)
+```
