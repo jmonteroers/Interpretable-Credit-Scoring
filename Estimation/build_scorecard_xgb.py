@@ -3,7 +3,7 @@ import xgboost as xgb
 import pandas as pd
 from collections import defaultdict
 from typing import Iterable
-
+from scipy.special import logit
 
 def get_trees_by_feature(booster) -> dict:
     """Extracts trees from booster, building a dictionary that maps a feature name to a list of trees. 
@@ -93,13 +93,13 @@ if __name__ == "__main__":
     y_train = train[TARGET]
     
     gb_constraints = {feat: -1 for feat in X_train.columns}
-
+    base_score = 0.5
     gb_est_exp = XGBClassifier(
             tree_method="hist",
             monotone_constraints=gb_constraints, 
             max_depth=1, n_estimators=100, learning_rate=0.5, 
             random_state=RANDOM_SEED,
-            base_score=0.5
+            base_score=base_score
             )
     gb_est_exp.fit(X_train, y_train)
 
@@ -110,10 +110,10 @@ if __name__ == "__main__":
     # Build scorecard
     bt = pd.read_excel(PARENT_DIR / "meta" / "woe_map" / "woe_mapping.xlsx")
     feats = X_train.columns.tolist()
-    scorecard = build_scorecard_xgb(bt, xgb_trees, feats, 0., 20., 600.)
+    scorecard = build_scorecard_xgb(bt, xgb_trees, feats, logit(base_score), 20., 600.)
     # Add Weight (%)
     scorecard.set_index("Attribute", inplace=True)
-    scorecard["Weight (%)"] = calc_weights_point_based(X_train, xgb_trees, 0.)
+    scorecard["Weight (%)"] = calc_weights_point_based(X_train, xgb_trees, logit(base_score))
     # TODO: Add WoE - maybe separate function
     scorecard.reset_index(inplace=True)
 

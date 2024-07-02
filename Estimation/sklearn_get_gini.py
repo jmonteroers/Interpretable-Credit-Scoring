@@ -96,8 +96,9 @@ if __name__ == "__main__":
     # Which models to get Gini for
     FIT_DT = False
     FIT_RF = False
-    FIT_BOOST = False
-    FIT_NN = True
+    FIT_BOOST = True
+    FIT_NN = False
+
     MONOTONICITY = True
 
     # Store gini metrics
@@ -180,6 +181,8 @@ if __name__ == "__main__":
     if FIT_BOOST:
         from xgboost import XGBClassifier
 
+        BASE_SCORE = 0.5
+
         # Monotone Constraints
         gb_constraints = None
         if MONOTONICITY:
@@ -191,12 +194,15 @@ if __name__ == "__main__":
         'learning_rate': [0.1, 0.3, 0.5]
         }
         # Simple grid (testing)
-        gb_param_grid = {
-        'max_depth': [1],
-        'n_estimators': [100],
-        'learning_rate': [0.1]
-        }
-        gb_est = XGBClassifier(tree_method="hist", monotone_constraints=gb_constraints, random_state=RANDOM_SEED)
+        # gb_param_grid = {
+        # 'max_depth': [1],
+        # 'n_estimators': [100],
+        # 'learning_rate': [0.1]
+        # }
+        gb_est = XGBClassifier(
+            tree_method="hist", monotone_constraints=gb_constraints, 
+            base_score=BASE_SCORE, random_state=RANDOM_SEED
+            )
         gb_fit, gb_train_gini, gb_test_gini = get_gini_sklearn(
             gb_est, X_train, y_train, X_test, y_test, gb_param_grid, cv=3, verbose=4
             )
@@ -208,7 +214,7 @@ if __name__ == "__main__":
             tree_method="hist",
             monotone_constraints=gb_constraints, 
             max_depth=1, n_estimators=100, learning_rate=0.5, 
-            random_state=RANDOM_SEED
+            base_score=BASE_SCORE, random_state=RANDOM_SEED
             )
         gb_est_exp.fit(X_train, y_train)
         gb_exp_train_gini, gb_exp_test_gini = gini_train_test(
