@@ -145,7 +145,7 @@ if __name__ == "__main__":
     if FIT_RF:
         from sklearn.ensemble import RandomForestClassifier
         rf_param_grid = {
-        'n_estimators': [10, 100, 1000],
+        'n_estimators': [10, 100, 250, 500],
         'max_depth': [1, 5, 10],
         'min_samples_leaf': [0.0025, 0.005, 0.01]
         }
