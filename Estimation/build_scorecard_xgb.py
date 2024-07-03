@@ -78,7 +78,7 @@ def calc_weights_point_based(X: pd.DataFrame, trees_by_feat: dict, base_score: f
             trees_by_feat, feat, X, X[feat], base_score, pdo=20., peo=600.
             )
         sd_by_feat[feat] = np.std(points)
-    return sd_by_feat / sd_by_feat.sum()
+    return 100. * sd_by_feat / sd_by_feat.sum()
 
 
 if __name__ == "__main__":
