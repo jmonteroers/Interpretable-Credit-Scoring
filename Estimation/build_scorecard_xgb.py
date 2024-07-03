@@ -5,6 +5,7 @@ from collections import defaultdict
 from typing import Iterable
 from scipy.special import logit
 
+
 def get_trees_by_feature(booster) -> dict:
     """Extracts trees from booster, building a dictionary that maps a feature name to a list of trees. 
     Assumes depth of fitted trees is 1"""
@@ -18,19 +19,19 @@ def get_trees_by_feature(booster) -> dict:
 
 
 def get_points_for_feature(
-        trees_by_feat: dict, feat: str, X: pd.DataFrame, 
+        trees_by_feat: dict, feat: str, feats: list,
         val: Iterable, base_score: float, pdo: float, peo: float):
     """Calculate the points for a vector of feature values"""
-    n = X.shape[0]
+    n = len(val)
     K = len(trees_by_feat)
     factor = -pdo/np.log(2)
     trees = trees_by_feat[feat]
-    # Build artificial observation
-    X_val = X.copy()
+    # Build artificial observation - filled with zeros except for feat
+    X_val = pd.DataFrame(np.zeros((n, len(feats))), columns=feats)
     X_val[feat] = val
     # Get estimated points for this feature value
-    val_points = (base_score + peo) / K
-    # base_margin set to zero so that we extract margin values
+    val_points = (factor*base_score + peo) / K
+    # base_margin set to zero so that we can extract margin values
     DM_X_val = xgb.DMatrix(X_val, base_margin=np.zeros((n,)))
     for tree in trees:
         val_points += factor*tree.predict(DM_X_val, output_margin=True)
@@ -48,7 +49,7 @@ def build_scorecard_xgb(
     scorecard = scorecard.loc[
         (scorecard["Bin"] != "Special") 
         & ~scorecard["Bin"].isna()
-        & (np.abs(scorecard["Count (%)"]) > 1e-8)
+        & (scorecard["Count (%)"] > 1e-8)
     ]
     scorecard.set_index("Attribute", inplace=True)
     # add points column, filled with zeros by default
@@ -57,14 +58,9 @@ def build_scorecard_xgb(
     for attribute in scorecard.index.unique():
         print(f"Calculating points for attribute {attribute}...")
         sc_attr = scorecard.loc[attribute]
-        n_rows_sc = sc_attr.shape[0]
-
-        # create artificial X, 0s everywhere except for attribute
-        attr_obs = pd.DataFrame(np.zeros((n_rows_sc, len(feats))), columns=feats)
-
         # edit points for attribute
         scorecard.loc[attribute, "Points"] = get_points_for_feature(
-            trees_by_feat, attribute, attr_obs, sc_attr.WoE.values,
+            trees_by_feat, attribute, feats, sc_attr.WoE.values,
             base_score=base_score, pdo=pdo, peo=peo
         )
     return scorecard.reset_index()
@@ -75,7 +71,7 @@ def calc_weights_point_based(X: pd.DataFrame, trees_by_feat: dict, base_score: f
     sd_by_feat = pd.Series()
     for feat in trees_by_feat:
         points = get_points_for_feature(
-            trees_by_feat, feat, X, X[feat], base_score, pdo=20., peo=600.
+            trees_by_feat, feat, X.columns.tolist(), X[feat], base_score, pdo=20., peo=600.
             )
         sd_by_feat[feat] = np.std(points)
     return 100. * sd_by_feat / sd_by_feat.sum()
@@ -105,8 +101,8 @@ if __name__ == "__main__":
 
     xgb_trees = get_trees_by_feature(gb_est_exp.get_booster())
     # function to iterate over woe mapping and calculate points 
-    ltv_points = get_points_for_feature(xgb_trees, "LTV", X_train.iloc[0:3], [-0.52, 0.11, 0.25], 0., 20., 600.)
-
+    ltv_points = get_points_for_feature(xgb_trees, "LTV", X_train.columns.tolist(), [-0.52, 0.11, 0.25], 0., 20., 600.)
+    
     # Build scorecard
     bt = pd.read_excel(PARENT_DIR / "meta" / "woe_map" / "woe_mapping.xlsx")
     feats = X_train.columns.tolist()
