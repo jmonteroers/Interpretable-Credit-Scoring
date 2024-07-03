@@ -116,7 +116,7 @@ if __name__ == "__main__":
     scorecard["Weight (%)"] = calc_weights_point_based(X_train, xgb_trees, logit(base_score))
     # TODO: Add WoE - maybe separate function
     scorecard.reset_index(inplace=True)
-
+    
     # Clean-up
     merged_scorecard = combine_intervals(scorecard)
     clean_sc = clean_scorecard_rf(merged_scorecard)

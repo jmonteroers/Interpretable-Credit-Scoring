@@ -67,7 +67,7 @@ def extract_elements_cat_interval(interval: str) -> Tuple[str, str]:
 def combine_intervals(scorecard):
     def combine_intv_group(group):
         # detect missing and remove
-        has_missing = "Missing" in group.Bin
+        has_missing = "Missing" in group.Bin.values
         group_nm = group.loc[group.Bin != "Missing"]
         if len(group_nm) == 0:  # only missing
             merged_intv = "Missing"
@@ -76,13 +76,15 @@ def combine_intervals(scorecard):
             begin_first_intv, _ = extract_elems_num_interval(group_nm.Bin.iloc[0]) 
             # extract last interval
             _, end_last_intv = extract_elems_num_interval(group_nm.Bin.iloc[-1])
-            merged_intv = begin_first_intv + ", " + end_last_intv + has_missing*"+ Missing"
+            merged_intv = begin_first_intv + ", " + end_last_intv
+            merged_intv += has_missing*", Missing"
         else:
             combined_elements = []
             for intv in group_nm.Bin:
                 elements = extract_elements_cat_interval(intv)
                 combined_elements.extend(elements)
-            merged_intv = f"[{' '.join(combined_elements)}]"
+            missing_str = has_missing*" Missing"
+            merged_intv = f"[{' '.join(combined_elements)}{missing_str}]"
         return pd.Series({
             "Bin": merged_intv,
             "Count (%)": group["Count (%)"].sum(),
