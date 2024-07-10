@@ -139,7 +139,7 @@ def export_to_latex_rf(sccard, outpath, attributes=None):
        to_latex(
            outpath, 
            hrules=True,
-           column_format="|p{4cm}|p{1.5cm}|p{5cm}|p{2cm}|p{2cm}|p{2cm}|",
+           column_format="|p{4cm}p{1.5cm}p{5cm}p{2cm}p{2cm}p{2cm}|",
            multirow_align="t",
            environment="longtable"
            )

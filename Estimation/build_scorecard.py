@@ -150,7 +150,7 @@ def export_to_latex(sccard, outpath, attributes=None):
        to_latex(
            outpath, 
            hrules=True,
-           column_format="|p{4cm}|p{1.5cm}|p{1.5cm}|p{3cm}|p{1.5cm}|p{1.5cm}|p{1.25cm}|p{1.25cm}|",
+           column_format="|p{4cm}p{1.25cm}p{1.25cm}p{3cm}p{1.25cm}p{1.25cm}p{1.1cm}p{1.1cm}|",
            multirow_align="t",
            environment="longtable"
            )
