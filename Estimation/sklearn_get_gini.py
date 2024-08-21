@@ -96,7 +96,7 @@ if __name__ == "__main__":
     # Which models to get Gini for
     FIT_DT = False
     FIT_RF = False
-    FIT_BOOST = True
+    FIT_BOOST = False
     FIT_NN = False
 
     MONOTONICITY = True
@@ -252,7 +252,7 @@ if __name__ == "__main__":
     breakpoint()
     scatterplot_compare_series(
         std_probs, new_probs, 
-        x_label="Scikit-learn Probabilities", y_label="Probabilities using logit", 
+        x_label="Predicted Probabilities (Scikit-learn)", y_label="Predicted Probabilities (logit average)", 
         s=20)
     
 

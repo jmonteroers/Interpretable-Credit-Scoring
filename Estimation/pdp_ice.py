@@ -24,14 +24,15 @@ sample_X_train = X_train.sample(n=75, random_state=RANDOM_SEED)
 def plot_ice(model, X, features, x_labels):
     axes = PartialDependenceDisplay.from_estimator(
         model, X, features=features, centered=True, kind='both', pd_line_kw={"label": "Average"}
-        ).axes_.squeeze()
-    for ax, xlab in zip(axes, x_labels):
+        ).axes_
+    iter_axes = axes[0, :]
+    for ax, xlab in zip(iter_axes, x_labels):
         # Add horizontal line
         ax.axhline(y=0, color='red', linestyle='--', label="Non-increasing Limit", alpha=0.75)
         ax.legend()
         # Modify x label
         ax.set_xlabel(xlab)
-    return ax
+    return iter_axes
 
 # Neural Network Model
 if FIT_NN:
@@ -57,8 +58,8 @@ if FIT_XGB:
             )
     xgb_model.fit(X_train, y_train)
     plot_ice(
-            xgb_model, sample_X_train, features=["LTV", "NAME_EDUCATION_TYPE"], 
-            x_labels=["Loan-to-Value", "Education Level"]
+            xgb_model, sample_X_train, features=["LTV"], 
+            x_labels=["Loan-to-Value"]
             )
     plt.show()
 
@@ -73,8 +74,8 @@ if FIT_EXP_XGB:
             )
     exp_xgb_model.fit(X_train, y_train)
     plot_ice(
-        exp_xgb_model, sample_X_train, features=["LTV", "NAME_EDUCATION_TYPE"], 
-        x_labels=["Loan-to-Value", "Education Level"]
+        exp_xgb_model, sample_X_train, features=["LTV"], 
+        x_labels=["Loan-to-Value"]
         )    
     plt.show()
 

@@ -131,7 +131,6 @@ barplot(
   height = coeffs_rep,
   names.arg = colnames(train_x),
   col = "skyblue",
-  main = "Coefficients of 1st Order Polynomial Representation",
   ylab = "Values",
   cex.names = 0.5,          # Reduce the size of the x-axis labels
   las = 2
@@ -189,7 +188,7 @@ barplot(
   height = lean_coeffs_rep,
   names.arg = colnames(lean_train_x),
   col = "skyblue",
-  main = "Coefficients of 1st Order Polynomial Representation",
+  # main = "Coefficients of 1st Order Polynomial Representation",
   ylab = "Values",
   cex.names = 0.5,          # Reduce the size of the x-axis labels
   las = 2
