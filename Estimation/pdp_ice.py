@@ -7,7 +7,7 @@ from xgboost import XGBClassifier
 from utils.utils import PARENT_DIR, TARGET
 
 RANDOM_SEED = 1234
-FIT_NN = True
+FIT_NN = False
 FIT_XGB = True
 FIT_EXP_XGB = True
 
@@ -28,7 +28,7 @@ def plot_ice(model, X, features, x_labels):
     iter_axes = axes[0, :]
     for ax, xlab in zip(iter_axes, x_labels):
         # Add horizontal line
-        ax.axhline(y=0, color='red', linestyle='--', label="Non-increasing Limit", alpha=0.75)
+        ax.axhline(y=0, color='red', linestyle=':', label="Non-increasing Limit", alpha=0.75)
         ax.legend()
         # Modify x label
         ax.set_xlabel(xlab)
