@@ -17,6 +17,8 @@ library(nn2poly)
 library(keras)
 library(tictoc)
 library(pROC)
+library(dplyr)
+
 # This sets all needed seeds
 tensorflow::set_random_seed(42)
 
@@ -37,6 +39,22 @@ print_gini_train_test <- function(
   print(get_gini(as.numeric(train_y), pred_train_nn))
   print("Test Gini")
   print(get_gini(as.numeric(test_y), pred_test_nn))
+}
+
+prettify_attrs <- function(features) {
+  # Load meta
+  meta <- read.csv("../meta/train_summary_applications_ext.csv")
+  meta <- meta[c("Attribute", "Clean.Attribute")]
+  meta["Attribute"] <- sapply(meta["Attribute"], tolower)
+  meta
+  
+  # Create dataframe for features
+  feats <- data.frame(Attribute = sapply(features, tolower))
+  
+  # Left merge to get pretty attributes
+  feats <- feats %>% left_join(meta, by=join_by(Attribute))
+  
+  feats[["Clean.Attribute"]]
 }
 ```
 
@@ -127,14 +145,25 @@ The method has about a `r round(100*sum(coeffs_rep > 0)/length(coeffs_rep), 2)`%
 
 Barplot of coefficients:
 ```{r}
+par(mar = c(10.5, 4, 4, 2))  # Adjust the margins
 barplot(
   height = coeffs_rep,
-  names.arg = colnames(train_x),
+  names.arg = prettify_attrs(colnames(train_x)),
   col = "skyblue",
-  ylab = "Values",
-  cex.names = 0.5,          # Reduce the size of the x-axis labels
+  ylab = "Coefficients",
+  cex.names = 0.8,          # Reduce the size of the x-axis labels
   las = 2
 )
+```
+
+```{r}
+library(ggplot2)
+barplot_data <- data.frame(x = prettify_attrs(colnames(train_x)), y = coeffs_rep)
+barplot <- ggplot(barplot_data, aes(x = x, y = y)) +
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(size=5, angle = 90, hjust = 1)) +
+  ylab("Coefficients")
+barplot
 ```
 
 ## Dropping positive coefficients
