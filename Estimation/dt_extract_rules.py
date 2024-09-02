@@ -1,8 +1,8 @@
-from sklearn.tree import _tree
+from sklearn.tree import _tree, export_graphviz
 import numpy as np
 import pandas as pd
 from utils.attrs import prettify_cols
-
+import re
 
 def get_rules_dt(tree, feature_names, pdo, peo, default_str="-"):
     """Based on mljar: https://mljar.com/blog/extract-rules-decision-tree/. Adapted to produce rules in pandas df"""
@@ -54,6 +54,49 @@ def rules_to_latex(rules, outpath):
     out_rules.to_latex(outpath, escape=False, index=False)
 
 
+def get_total_ratio_in_dot(dot_str):
+    pattern = r'\[(\d+)(\.0)?,\s*(\d+)(\.0)?\]'
+    total_match = re.search(pattern, dot_str)
+    return int(total_match.group(1))/int(total_match.group(3))
+
+
+def replace_leaf_labels_in_dot(dot_file_path):
+    # Regular expression to match the leaf labels in the format [pro goods, number bads]
+    pattern = r'\[(\d+)(\.0)?,\s*(\d+)(\.0)?\]'
+
+    # Function to calculate the proportion of bads
+    def calculate_proportion_g(match, total_r): 
+        goods = int(match.group(1))
+        bads = int(match.group(3))
+        total = goods + bads
+        if total == 0:
+            return "NaN"
+        prop_bads = bads/total
+        woe = np.log(goods/bads) - np.log(total_r)
+        return f"{100*prop_bads:.1f}% ({woe:.2f})"
+
+    # Read the DOT file
+    with open(dot_file_path, 'r') as file:
+        dot_content = file.read()
+
+    # Variable to store the total ratio
+    total_ratio = get_total_ratio_in_dot(dot_content)
+
+    # Replace the labels in the DOT content
+    updated_content = re.sub(
+        pattern, lambda m: calculate_proportion_g(m, total_ratio), dot_content
+        )
+    updated_content = updated_content.replace("samples", "N Samples")
+    updated_content = updated_content.replace("value", "Percentage Bads (WoE)")
+    # Overwrite the original DOT file with the updated content
+    with open(dot_file_path, 'w') as file:
+        file.write(updated_content)
+
+    print(f"DOT file has been updated with the proportion of bads.")
+
+# Example usage
+# root_goods, root_bads = replace_leaf_labels_in_dot('your_dot_file.dot')
+
 if __name__ == "__main__":
     # Fit explainable models, interpret
     from sklearn.tree import DecisionTreeClassifier
@@ -87,7 +130,16 @@ if __name__ == "__main__":
      # Extract rules
     df_rules = get_rules_dt(dt_fit, prettify_cols(X_train).columns, 20., 600.)
     rules_to_latex(df_rules, outpath_rules)
-
+    
+    # Extract Graphviz representation
+    outpath_dot = PARENT_DIR / 'meta' / 'dt_graphviz.dot'
+    export_graphviz(
+        dt_fit, out_file=str(outpath_dot), 
+        feature_names=X_train.columns, label='root', precision=2, rounded=True, impurity=False
+        )
+    replace_leaf_labels_in_dot(outpath_dot)
+    # Run `dot -Tpng dt_graphviz.dot -o dt_graphviz.png` to obtain final chart
+    breakpoint()
     # Plot tree
     plot_tree(dt_fit, feature_names=X_train.columns, label='root', precision=2, rounded=True, impurity=False, fontsize=14)
     plt.show()
