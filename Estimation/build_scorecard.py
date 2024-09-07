@@ -95,9 +95,9 @@ def clean_bins(str_l, max_len=1):
         else:
             pattern = r"(\d+)"
         l = re.findall(pattern, str_l)
-        # Correct if too long
         has_missing = "Missing" in l  # never drop missing
-        if len(l) >= max_len:
+        # Correct if too long
+        if len(l) > max_len:
             l = l[:max_len] + has_missing*["Missing"] + ["..."]
         return ", ".join(l)
 
