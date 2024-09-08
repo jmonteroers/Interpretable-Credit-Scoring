@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def scatterplot_compare_series(x, y, x_label='', y_label='', title='', legend=False, data_label='', **kwargs_scatter):
+def scatterplot_compare_series(x, y, x_label='', y_label='', title='', size_label=None, legend=False, data_label='', **kwargs_scatter):
     """
     Creates a scatter plot comparing two series with a 45-degree line.
     
@@ -18,14 +18,19 @@ def scatterplot_compare_series(x, y, x_label='', y_label='', title='', legend=Fa
     # Create scatter plot
     plt.scatter(x, y, label=data_label, **kwargs_scatter)
 
+    
     # Add a 45-degree line
     min_val = min(min(x), min(y))
     max_val = max(max(x), max(y))
     plt.plot([min_val, max_val], [min_val, max_val], color='red', linestyle='--', label='45-degree line')
 
     # Labels and legend
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
+    if size_label is not None:
+        plt.xlabel(x_label, fontsize=size_label)
+        plt.ylabel(y_label, fontsize=size_label)
+    else:
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)     
     plt.title(title)
     if legend:
         plt.legend()

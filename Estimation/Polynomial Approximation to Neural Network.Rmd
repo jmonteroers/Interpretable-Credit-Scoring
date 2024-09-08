@@ -302,11 +302,21 @@ The representation achieves extremely similar predictions as the original networ
 ```{r}
 logit_pred_nn <- keras_model_sequential() %>% nn()
 prediction_nn <- predict(logit_pred_nn, test_x)[, 2]
-nn2poly:::plot_diagonal(x_axis = prediction_nn,
+```
+
+```{r}
+comp_plot <- nn2poly:::plot_diagonal(x_axis = prediction_nn,
               y_axis =  test_pred_poly_matrix[, 2],
               xlab = "NN prediction",
               ylab = "Polynomial prediction")
+comp_plot <- comp_plot +
+  theme(
+    axis.title.x = element_text(size = 12),  # Increase x label font size
+    axis.title.y = element_text(size = 12)   # Increase y label font size
+  )
+comp_plot
 ```
+
 And given the Gini results above, it seems to perform even better at preserving the ranking in the logit scale.
 
 

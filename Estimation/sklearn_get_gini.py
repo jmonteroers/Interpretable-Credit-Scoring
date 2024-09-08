@@ -249,11 +249,12 @@ if __name__ == "__main__":
 
     std_probs = rf_est_exp.predict_proba(X_train)[:, 1]
     new_probs = rf_est_exp.predict_using_logit(X_train)[:, 1]
-    breakpoint()
     scatterplot_compare_series(
         std_probs, new_probs, 
         x_label="Predicted Probabilities (Scikit-learn)", y_label="Predicted Probabilities (logit average)", 
-        s=20)
+        size_label=12,
+        s=20
+        )
     
 
 
