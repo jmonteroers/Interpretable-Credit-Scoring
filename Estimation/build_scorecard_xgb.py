@@ -113,12 +113,10 @@ if __name__ == "__main__":
     # TODO: Add WoE - maybe separate function
     scorecard.reset_index(inplace=True)
     
-    # Clean-up
+    # Clean-up & export
     merged_scorecard = combine_intervals(scorecard)
+    merged_scorecard.to_excel(PARENT_DIR / 'meta' / 'xgb_scorecard.xlsx', index=False)
     clean_sc = clean_scorecard_rf(merged_scorecard)
-
-    # Export
-    clean_sc.to_excel(PARENT_DIR / 'meta' / 'xgb_scorecard.xlsx', index=False)
     export_to_latex_rf(clean_sc, PARENT_DIR / 'meta' / 'xgb_scorecard_latex.tex', None)
 
     breakpoint()

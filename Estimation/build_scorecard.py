@@ -227,10 +227,10 @@ if __name__ == "__main__":
 
     scorecard, _ = build_scorecard(train, bt)
     check_scorecard(scorecard)
-    scorecard = clean_scorecard(scorecard)
 
-    # Export scorecard as Excel
+    # Export scorecard as Excel and LaTeX
     scorecard.to_excel(PARENT_DIR / 'meta' / 'scorecard_bic.xlsx', index=False)
+    scorecard = clean_scorecard(scorecard)
     export_to_latex(scorecard, PARENT_DIR / 'meta' / 'scorecard_latex.tex', None)
 
     breakpoint()

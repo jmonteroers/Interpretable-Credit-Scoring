@@ -169,7 +169,7 @@ if __name__ == "__main__":
     merged_scorecard = combine_intervals(scorecard)
 
     # Clean and export scorecard
+    merged_scorecard.to_excel(PARENT_DIR / 'meta' / 'rf_scorecard.xlsx', index=False)
     clean_sc = clean_scorecard_rf(merged_scorecard)
-    clean_sc.to_excel(PARENT_DIR / 'meta' / 'rf_scorecard.xlsx', index=False)
     export_to_latex_rf(clean_sc, PARENT_DIR / 'meta' / 'rf_scorecard_latex.tex', None)
     breakpoint()
