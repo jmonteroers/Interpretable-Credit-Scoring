@@ -1,6 +1,7 @@
 from pathlib import Path
+import pandas as pd
 
-PARENT_DIR = Path(__file__).absolute().parents[3] / 'Data' / 'Home Credit'
+PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
 CURRENT_ID = "SK_ID_CURR"
 PREV_ID = "SK_ID_PREV"
 BUREAU_ID = "SK_ID_BUREAU"
@@ -8,6 +9,7 @@ BUREAU_ID = "SK_ID_BUREAU"
 # Just for exploration purposes
 SAMPLE_ID_CURR = 350419
 
+TARGET = "TARGET"
 
 # Util functions
 def add_count(df, aux_df, aux_id, new_colname, subset=None, main_id=CURRENT_ID):
@@ -43,3 +45,17 @@ def add_age_credit(df, aux_df, age_col, new_colname, type, na_imp=None, main_id=
     if na_imp is not None:
         df[new_colname].fillna(na_imp, inplace=True)
     return df
+
+
+def load_train_test(only_train=False):
+    train = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_woe.csv.zip', compression="zip")
+    X_train = train.drop(columns=[TARGET, CURRENT_ID])
+    y_train = train[TARGET]
+
+    if not only_train:
+        test = pd.read_csv(PARENT_DIR / 'processed' / 'test_apps_woe.csv.zip', compression="zip")
+        X_test = test.drop(columns=[TARGET, CURRENT_ID])
+        y_test = test[TARGET]
+        return train, X_train, y_train, test, X_test, y_test
+
+    return train, X_train, y_train

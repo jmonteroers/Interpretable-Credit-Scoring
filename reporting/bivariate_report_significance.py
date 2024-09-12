@@ -3,10 +3,7 @@ from math import sqrt
 from statsmodels.formula.api import logit
 import numpy as np
 
-from pdb import set_trace
-
-
-TARGET = "TARGET"
+from utils.utils import TARGET
 
 
 def create_density_by_default(df, feat, bw_method=None, ind=None):
@@ -33,7 +30,7 @@ def create_barplot_perc_def(df, feat):
      err_df = df.groupby(feat)[[TARGET]].std().reset_index()
      err_df.rename(columns={TARGET: "% Bad"}, inplace=True)
      # z_{0.95} = 1.645
-     err_df = 1.645*err_df/sqrt(n)
+     err_df["% Bad"] = 1.645*err_df["% Bad"]/sqrt(n)
 
      # Create barplot
      ax = avg_df.plot.bar(x = feat, y = "% Bad", yerr = err_df, color = "#43ff64d9")
@@ -95,9 +92,8 @@ def export_significance_test(df, outpath_ns, outpath_s):
 if __name__ == "__main__":
     import pandas as pd
     import numpy as np
-    from pathlib import Path
+    from utils.utils import PARENT_DIR
 
-    PARENT_DIR = Path(__file__).absolute().parents[2] / 'Data' / 'Home Credit'
     df = pd.read_csv(PARENT_DIR / 'processed' / 'train_apps_woe.csv.zip')
 
     # F-test table with p-values
@@ -109,5 +105,3 @@ if __name__ == "__main__":
     # plots to illustrate bivariate effects
     create_density_by_default(df, "LTV", bw_method="silverman", ind=np.arange(.1, 2., .01))
     create_barplot_perc_def(df, "FLAG_WORK_PHONE")
-    set_trace()
-

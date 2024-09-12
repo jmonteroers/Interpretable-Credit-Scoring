@@ -4,7 +4,7 @@ them vertically to produce a single Home Credit Balance dataset (prev_balances)
 """
 
 import pandas as pd
-from utils import CURRENT_ID, PREV_ID, PARENT_DIR
+from utils.utils import CURRENT_ID, PREV_ID, PARENT_DIR
 
 SELECTED_COLS = [CURRENT_ID, PREV_ID, "MONTHS_BALANCE", "SK_DPD", "SK_DPD_DEF"]
 
